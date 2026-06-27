@@ -123,32 +123,83 @@ async def get_status(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Return combined DB + Celery task progress.
+
+    Strategy
+    --------
+    1. Always read the Portfolio row (source of truth for status / results).
+    2. If a ``task_id`` was stored in ``results.task_id``, also query the
+       Celery result backend for PROGRESS state.
+    3. Take the **higher** of the two progress values so the UI never goes
+       backwards if DB writes lag behind task updates.
+    4. If the Celery task is FAILURE and the DB still shows ``processing``,
+       surface the error detail from the task.
+    """
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
-    
+
     result = await db.execute(
         select(Portfolio)
         .where(Portfolio.id == portfolio_id, Portfolio.user_id == current_user.id)
         .options(selectinload(Portfolio.holdings))
     )
     portfolio = result.scalar_one_or_none()
-    
+
     if portfolio is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Portfolio not found"
+            detail="Portfolio not found",
         )
-        
-    response = {
-        "status": portfolio.status.value,
-        "progress": portfolio.progress,
+
+    db_status = portfolio.status.value          # "pending" | "processing" | "ready"
+    db_progress = portfolio.progress or 0       # 0-100
+    error_detail: str | None = (portfolio.results or {}).get("error")
+    task_id: str | None = (portfolio.results or {}).get("task_id")
+
+    # ── Merge Celery task state (best-effort) ─────────────────────────────────
+    celery_progress = 0
+    celery_stage: str | None = None
+
+    if task_id and task_id not in ("in_process",):
+        try:
+            from app.workers.celery_app import celery as _celery
+            task_result = _celery.AsyncResult(task_id)
+
+            if task_result.state == "PROGRESS":
+                meta = task_result.info or {}
+                celery_progress = meta.get("progress", 0)
+                celery_stage = meta.get("stage")
+
+            elif task_result.state == "SUCCESS":
+                celery_progress = 100
+
+            elif task_result.state == "FAILURE":
+                if db_status == "processing":
+                    # Celery knows it failed but DB hasn't been updated yet
+                    db_status = "pending"
+                    error_detail = str(task_result.result) if task_result.result else "Task failed"
+
+        except Exception:
+            pass  # Redis down / task expired — fall back to DB-only values
+
+    # Higher of the two wins
+    combined_progress = max(db_progress, celery_progress)
+
+    response: dict = {
+        "status": db_status,
+        "progress": combined_progress,
+        "portfolio": None,
     }
-    
+
+    if celery_stage:
+        response["stage"] = celery_stage
+
+    if error_detail:
+        response["error"] = error_detail
+
     if portfolio.status == PortfolioStatus.ready:
         response["portfolio"] = build_portfolio_json(portfolio)
-    else:
-        response["portfolio"] = None
-        
+
     return response
 
 

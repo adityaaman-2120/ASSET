@@ -1,0 +1,151 @@
+version: "3.9"
+
+# ─── Shared environment ───────────────────────────────────────────────────────
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://assets:assets@db:5432/assets
+  REDIS_URL: redis://redis:6379/0
+  SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+  ALGORITHM: HS256
+  ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+  GROQ_API_KEY: ${GROQ_API_KEY:-}
+  CORS_ORIGINS: "http://localhost:5173,http://localhost:3000"
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: assets
+      POSTGRES_PASSWORD: assets
+      POSTGRES_DB: assets
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assets -d assets"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Redis (broker + result backend) ────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── FastAPI (Uvicorn) ───────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 2
+      --loop uvloop
+      --http httptools
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+
+  # ── Celery Worker ───────────────────────────────────────────────────────────
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # On Linux: use prefork (default).  On Windows hosts: add --pool=solo
+    command: >
+      celery -A app.workers.celery_app worker
+      --loglevel=info
+      --concurrency=4
+      --queues=analysis,default
+      --hostname=worker@%h
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+    # Resource caps — the pipeline fetches market data + runs XGBoost
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  # ── Celery Beat (optional periodic tasks) ──────────────────────────────────
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    depends_on:
+      - redis
+    command: >
+      celery -A app.workers.celery_app beat
+      --loglevel=info
+      --schedule=/tmp/celerybeat-schedule
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+
+  # ── Flower (Celery monitoring UI) ──────────────────────────────────────────
+  flower:
+    image: mher/flower:2.0
+    restart: unless-stopped
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      FLOWER_PORT: "5555"
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    command: celery --broker=redis://redis:6379/0 flower --port=5555
+
+  # ── React + Vite (optional — or run npm run dev locally) ───────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - api
+    profiles:
+      - full   # only started with: docker compose --profile full up
+
+volumes:
+  postgres_data:
+  redis_data:

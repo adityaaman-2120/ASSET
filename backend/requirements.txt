@@ -19,5 +19,6 @@ python-dotenv
 httpx
 pyarrow
 fastparquet
-celery
+celery[redis]
 redis
+psycopg2-binary
