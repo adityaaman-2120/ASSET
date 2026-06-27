@@ -16,6 +16,7 @@ from pypfopt import EfficientFrontier, risk_models, expected_returns
 from indicators import compute_indicators
 from ml_model import predict_signal, FEATURE_KEYS
 from regime import detect_regime
+from stress_test import run_stress_test
 
 load_dotenv()
 
@@ -132,6 +133,9 @@ class GenerateInsightsRequest(BaseModel):
   portfolio: list[InsightsPortfolioItem]
   portfolio_value: float = 0
   invested_capital: float = 0
+
+class StressTestRequest(BaseModel):
+  allocations: list[dict]
 
 _model = None
 
@@ -561,3 +565,8 @@ def generate_insights(body: GenerateInsightsRequest):
     insights = FALLBACK_INSIGHTS
 
   return {"insights": insights, "generated_at": datetime.utcnow().isoformat()}
+
+
+@app.post("/api/stress-test")
+def stress_test_endpoint(body: StressTestRequest):
+  return run_stress_test(body.allocations)

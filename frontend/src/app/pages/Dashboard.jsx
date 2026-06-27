@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LineChart, Line, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from 'recharts'
+import { LineChart, Line, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis } from 'recharts'
 import { useInvestorStore } from '../store/investorStore'
 import { api } from '../api/client'
 
@@ -107,6 +107,8 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [shares,       setShares]       = useState({})
   const [activeTab,    setActiveTab]    = useState('holdings')
+  const [stress,       setStress]       = useState(null)
+  const [stressLoading, setStressLoading] = useState(false)
 
   const allocations     = portfolio?.allocations || []
   const tickers         = allocations.map(a => a.ticker)
@@ -161,9 +163,23 @@ export default function Dashboard() {
     } catch (e) { console.error('Insights failed', e) }
   }, [allocations, livePrices, shares, insights.length])
 
+  const fetchStress = useCallback(async () => {
+    if (!allocations.length || stress || stressLoading) return
+    setStressLoading(true)
+    try {
+      const res = await api.post('/api/stress-test', { allocations })
+      setStress(res.data)
+    } catch (e) { console.error('Stress test failed', e) }
+    finally { setStressLoading(false) }
+  }, [allocations, stress, stressLoading])
+
+  useEffect(() => {
+    if (activeTab === 'scenarios') fetchStress()
+  }, [activeTab, fetchStress])
+
   useEffect(() => {
     if (!portfolio) { navigate('/'); return }
-    fetchLivePrices().then(fetchInsights)
+    fetchLivePrices().then(() => { fetchInsights(); fetchStress(); })
     const iv = setInterval(fetchLivePrices, 30000)
     return () => clearInterval(iv)
   }, [])
@@ -518,29 +534,56 @@ export default function Dashboard() {
             {activeTab === 'scenarios' && (
               <div className="space-y-3">
                 <p className="text-xs mb-2" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)' }}>
-                  1-year projection · Expected return {expReturn}% · Volatility {vol?.toFixed(1)}%
+                  {stress?.summary || 'Historical crash stress-testing against 2008, COVID-2020, and 2022 selloffs'}
                 </p>
-                {[
-                  { label: 'Bull Case', desc: 'Market performs above expectations',           value: scenario.bull, color: '#16a34a', bg: 'rgba(22,163,74,0.07)',  border: 'rgba(22,163,74,0.2)',  icon: '🚀' },
-                  { label: 'Base Case', desc: 'Market performs as modelled',                   value: scenario.base, color: '#008080', bg: 'rgba(0,128,128,0.06)',  border: 'rgba(0,128,128,0.18)', icon: '📈' },
-                  { label: 'Bear Case', desc: 'Market underperforms with high volatility',     value: scenario.bear, color: '#dc2626', bg: 'rgba(220,38,38,0.06)',  border: 'rgba(220,38,38,0.18)', icon: '🐻' },
-                ].map(sc => {
-                  const ret = investedCapital > 0 ? ((sc.value - investedCapital) / investedCapital * 100) : 0
+                {stressLoading && !stress && (
+                  <p className="text-sm text-center py-8" style={{ color: 'rgba(13,43,43,0.4)', fontFamily: 'Space Mono,monospace' }}>Running historical crash stress test…</p>
+                )}
+                {stress?.scenarios?.map(sc => {
+                  const outperformed = sc.portfolio_impact_pct > sc.benchmark_impact_pct
+                  const bg = outperformed ? 'rgba(0,128,128,0.06)' : 'rgba(220,38,38,0.06)'
+                  const border = outperformed ? 'rgba(0,128,128,0.18)' : 'rgba(220,38,38,0.18)'
+                  const chartData = [
+                    { name: 'Portfolio', impact: sc.portfolio_impact_pct },
+                    { name: 'NIFTY 50', impact: sc.benchmark_impact_pct },
+                  ]
                   return (
-                    <div key={sc.label} className="p-5 rounded-2xl" style={{ background: sc.bg, border: `1px solid ${sc.border}` }}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span>{sc.icon}</span>
-                          <p className="font-bold text-sm" style={{ fontFamily: 'Syne,sans-serif', color: '#0d2b2b' }}>{sc.label}</p>
+                    <div key={sc.name} className="p-5 rounded-2xl" style={{ background: bg, border: `1px solid ${border}` }}>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                        <div>
+                          <p className="font-bold text-sm" style={{ fontFamily: 'Syne,sans-serif', color: '#0d2b2b' }}>{sc.name}</p>
+                          <p className="text-[11px]" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.45)' }}>{sc.period}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold" style={{ fontFamily: 'Syne,sans-serif', fontSize: '1.1rem', color: sc.color }}>{fmtInr(sc.value)}</p>
-                          <p className="text-xs" style={{ fontFamily: 'Space Mono,monospace', color: sc.color }}>{fmtPct(ret)}</p>
+                        <div className="text-left sm:text-right flex sm:flex-col gap-3 sm:gap-0">
+                          <p className="font-bold text-xs sm:text-sm" style={{ fontFamily: 'Syne,sans-serif', color: '#dc2626' }}>
+                            Your portfolio: {sc.portfolio_impact_pct}%
+                          </p>
+                          <p className="text-xs" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.55)' }}>
+                            NIFTY buy-and-hold: {sc.benchmark_impact_pct}%
+                          </p>
                         </div>
                       </div>
-                      <p className="text-xs" style={{ fontFamily: 'Space Grotesk,sans-serif', color: 'rgba(13,43,43,0.5)' }}>{sc.desc}</p>
-                      <div className="mt-3 w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.08)' }}>
-                        <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max(ret + 50, 5), 95)}%`, background: sc.color }} />
+                      <p className="text-xs font-semibold mb-3" style={{ fontFamily: 'Space Grotesk,sans-serif', color: outperformed ? '#16a34a' : '#dc2626' }}>
+                        {sc.verdict}
+                      </p>
+                      <div className="w-full h-[120px] mt-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                            <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'rgba(13,43,43,0.6)', fontFamily: 'Space Mono' }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 10, fill: 'rgba(13,43,43,0.4)', fontFamily: 'Space Mono' }} unit="%" axisLine={false} tickLine={false} />
+                            <Tooltip formatter={val => [`${val}%`, 'Impact']} contentStyle={{ background: '#F4E1C1', border: '1px solid rgba(0,128,128,0.2)', borderRadius: '8px', fontSize: '11px', fontFamily: 'Space Mono' }} />
+                            <Bar dataKey="impact" radius={[4, 4, 4, 4]}>
+                              <Cell fill="#dc2626" />
+                              <Cell fill="#94a3b8" />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="mt-3 pt-3 border-t flex justify-between items-center text-[11px]" style={{ borderColor: 'rgba(0,128,128,0.1)', fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.45)' }}>
+                        <span>Data availability:</span>
+                        <span className="font-semibold" style={{ color: '#0d2b2b' }}>
+                          {sc.tickers_available} of {sc.tickers_total} stocks analyzed
+                        </span>
                       </div>
                     </div>
                   )
