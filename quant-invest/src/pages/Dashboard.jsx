@@ -1,10 +1,6 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  LineChart,
-  Line,
-  ResponsiveContainer,
-} from 'recharts'
+import { LineChart, Line, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from 'recharts'
 import { useInvestorStore } from '../store/investorStore'
 import { api } from '../api/client'
 
@@ -12,13 +8,10 @@ function fmtInr(n) {
   if (n == null || isNaN(n)) return '₹0'
   return '₹' + Number(n.toFixed(0)).toLocaleString('en-IN')
 }
-
-function fmtDelta(n) {
-  if (n == null || isNaN(n)) return '0.00'
-  const s = n >= 0 ? '+' : ''
-  return `${s}${n.toFixed(2)}`
+function fmtPct(n, plus = true) {
+  if (n == null || isNaN(n)) return '—'
+  return `${plus && n >= 0 ? '+' : ''}${n.toFixed(2)}%`
 }
-
 function timeAgo(date) {
   if (!date) return ''
   const s = Math.floor((Date.now() - date) / 1000)
@@ -27,354 +20,553 @@ function timeAgo(date) {
   return `${Math.floor(s / 60)}m ago`
 }
 
-const SIGNAL_BG = {
-  BUY: 'bg-green-100 text-green-800',
-  HOLD: 'bg-yellow-100 text-yellow-800',
-  SELL: 'bg-red-100 text-red-800',
+const SIGNAL_COLOR = { BUY: '#16a34a', HOLD: '#008080', SELL: '#dc2626' }
+const SIGNAL_BG    = { BUY: 'rgba(22,163,74,0.1)', HOLD: 'rgba(0,128,128,0.08)', SELL: 'rgba(220,38,38,0.08)' }
+const DONUT_COLORS = ['#008080','#006666','#9a6e3a','#c49a60','#004d4d','#7a5530','#00a0a0','#e0b87a']
+const INSIGHT_STYLE = {
+  warning:  { icon: '⚠', bg: 'rgba(154,110,58,0.07)',  border: 'rgba(154,110,58,0.22)', label: '#9a6e3a' },
+  positive: { icon: '↑', bg: 'rgba(22,163,74,0.06)',   border: 'rgba(22,163,74,0.22)',  label: '#16a34a' },
+  negative: { icon: '↓', bg: 'rgba(220,38,38,0.06)',   border: 'rgba(220,38,38,0.2)',   label: '#dc2626' },
+  tip:      { icon: '✦', bg: 'rgba(0,128,128,0.05)',   border: 'rgba(0,128,128,0.18)', label: '#008080' },
 }
 
-const INSIGHT_ICONS = {
-  warning: { icon: '⚠', bg: 'bg-amber-50 border-amber-200', iconColor: 'text-amber-600' },
-  positive: { icon: '✅', bg: 'bg-green-50 border-green-200', iconColor: 'text-green-600' },
-  negative: { icon: '📉', bg: 'bg-red-50 border-red-200', iconColor: 'text-red-600' },
-  tip: { icon: '💡', bg: 'bg-blue-50 border-blue-200', iconColor: 'text-blue-600' },
+function KpiCard({ label, value, sub, positive, neutral }) {
+  const col = neutral ? '#008080' : positive ? '#16a34a' : '#dc2626'
+  return (
+    <div className="p-4 rounded-2xl" style={{ background: 'rgba(244,225,193,0.7)', border: '1px solid rgba(0,128,128,0.12)' }}>
+      <p className="text-xs uppercase mb-1" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)', letterSpacing: '0.13em' }}>{label}</p>
+      <p className="font-bold leading-none" style={{ fontFamily: 'Syne,sans-serif', fontSize: '1.25rem', color: '#0d2b2b' }}>{value}</p>
+      {sub != null && (
+        <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
+          style={{ background: neutral ? 'rgba(0,128,128,0.08)' : positive ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)', color: col, fontFamily: 'Space Mono,monospace' }}>
+          {sub}
+        </span>
+      )}
+    </div>
+  )
 }
+
+function SignalBadge({ signal }) {
+  const s = signal || 'HOLD'
+  return (
+    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold"
+      style={{ background: SIGNAL_BG[s] || SIGNAL_BG.HOLD, color: SIGNAL_COLOR[s] || SIGNAL_COLOR.HOLD, fontFamily: 'Space Mono,monospace' }}>
+      {s}
+    </span>
+  )
+}
+
+function MiniSparkline({ data, color }) {
+  if (!data || data.length < 2) return null
+  const pts = data.map((p, i) => ({ i, p }))
+  return (
+    <ResponsiveContainer width="100%" height={48}>
+      <LineChart data={pts}>
+        <Line type="monotone" dataKey="p" stroke={color || '#008080'} strokeWidth={1.5} dot={false} />
+      </LineChart>
+    </ResponsiveContainer>
+  )
+}
+
+function RiskMeter({ volatility }) {
+  const v = volatility || 15
+  const pct = Math.min(Math.max(v * 3, 2), 98)
+  const label = v < 10 ? 'Low Risk' : v < 20 ? 'Medium Risk' : 'High Risk'
+  const color = v < 10 ? '#16a34a' : v < 20 ? '#9a6e3a' : '#dc2626'
+  return (
+    <div>
+      <div className="relative h-2 rounded-full overflow-hidden" style={{ background: 'linear-gradient(to right,#16a34a,#9a6e3a,#dc2626)' }}>
+        <div className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full shadow"
+          style={{ left: `${pct}%`, background: '#F4E1C1', border: '2px solid #0d2b2b', transform: 'translate(-50%,-50%)' }} />
+      </div>
+      <div className="flex justify-between mt-1.5">
+        <span className="text-[10px]" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.35)' }}>Low</span>
+        <span className="text-[10px] font-semibold" style={{ fontFamily: 'Space Mono,monospace', color }}>{label}</span>
+        <span className="text-[10px]" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.35)' }}>High</span>
+      </div>
+    </div>
+  )
+}
+
+const TABS = [
+  { id: 'holdings',  label: 'Holdings'    },
+  { id: 'signals',   label: 'ML Signals'  },
+  { id: 'insights',  label: 'AI Insights' },
+  { id: 'scenarios', label: 'Scenarios'   },
+]
 
 export default function Dashboard() {
-  const navigate = useNavigate()
-  const portfolio = useInvestorStore((s) => s.portfolio)
-  const profile = useInvestorStore((s) => s.profile)
+  const navigate    = useNavigate()
+  const portfolio   = useInvestorStore(s => s.portfolio)
+  const profile     = useInvestorStore(s => s.profile)
 
-  const [livePrices, setLivePrices] = useState({})
-  const [insights, setInsights] = useState([])
-  const [lastUpdated, setLastUpdated] = useState(null)
+  const [livePrices,   setLivePrices]   = useState({})
+  const [insights,     setInsights]     = useState([])
+  const [lastUpdated,  setLastUpdated]  = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [shares, setShares] = useState({})
+  const [shares,       setShares]       = useState({})
+  const [activeTab,    setActiveTab]    = useState('holdings')
 
-  const allocations = portfolio?.allocations || []
-  const tickers = allocations.map((a) => a.ticker)
+  const allocations     = portfolio?.allocations || []
+  const tickers         = allocations.map(a => a.ticker)
+  const preloadInsights = portfolio?.insights || []
 
-  const fetchLivePrices = useCallback(async () => {
-    if (!tickers.length) return
-    try {
-      const res = await api.get('/api/live-prices', { params: { tickers: tickers.join(',') } })
-      const map = {}
-      res.data.forEach((item) => {
-        map[item.ticker] = item
-      })
-      setLivePrices(map)
-      setLastUpdated(Date.now())
-
-      setShares((prev) => {
-        const next = { ...prev }
-        allocations.forEach((a) => {
-          if (!prev[a.ticker] && map[a.ticker]?.current_price) {
-            next[a.ticker] = a.amount / map[a.ticker].current_price
-          }
-        })
-        return next
-      })
-    } catch (e) {
-      console.error('Live prices fetch failed', e)
-    }
-  }, [tickers.join(',')])
-
-  const fetchInsights = useCallback(async () => {
-    if (!tickers.length) return
-    try {
-      const currentValue = computeCurrentValue()
-      const invested = allocations.reduce((s, a) => s + a.amount, 0)
-      const portItems = allocations.map((a) => ({
-        ticker: a.ticker,
-        name: a.name,
-        weight_pct: a.weight_pct,
-      }))
-      const res = await api.post('/api/generate-insights', {
-        portfolio: portItems,
-        portfolio_value: currentValue,
-        invested_capital: invested,
-      })
-      setInsights(res.data.insights || [])
-    } catch (e) {
-      console.error('Insights fetch failed', e)
-    }
-  }, [allocations, livePrices, shares])
+  useEffect(() => { if (preloadInsights.length) setInsights(preloadInsights) }, [])
 
   const computeCurrentValue = useCallback(() => {
     let total = 0
-    allocations.forEach((a) => {
-      const sh = shares[a.ticker] || 0
+    allocations.forEach(a => {
+      const sh    = shares[a.ticker] || 0
       const price = livePrices[a.ticker]?.current_price || 0
       total += sh * price
     })
     return total || allocations.reduce((s, a) => s + a.amount, 0)
   }, [allocations, livePrices, shares])
 
-  const currentValue = computeCurrentValue()
-  const investedCapital = allocations.reduce((s, a) => s + a.amount, 0)
-  const totalReturn = investedCapital > 0 ? ((currentValue - investedCapital) / investedCapital) * 100 : 0
+  const fetchLivePrices = useCallback(async () => {
+    if (!tickers.length) return
+    try {
+      const res = await api.get('/api/live-prices', { params: { tickers: tickers.join(',') } })
+      const map = {}
+      res.data.forEach(item => { map[item.ticker] = item })
+      setLivePrices(map)
+      setLastUpdated(Date.now())
+      setShares(prev => {
+        const next = { ...prev }
+        allocations.forEach(a => {
+          if (!prev[a.ticker] && map[a.ticker]?.current_price)
+            next[a.ticker] = a.amount / map[a.ticker].current_price
+        })
+        return next
+      })
+    } catch (e) { console.error('Live prices failed', e) }
+  }, [tickers.join(',')])
 
-  const computeTodayPnL = () => {
-    let total = 0
-    allocations.forEach((a) => {
-      const sh = shares[a.ticker] || 0
-      const lp = livePrices[a.ticker]
-      if (lp?.current_price && lp?.change_pct_1d != null) {
-        total += sh * lp.current_price * (lp.change_pct_1d / 100)
-      }
-    })
-    return total
-  }
-  const todayPnL = computeTodayPnL()
+  const fetchInsights = useCallback(async () => {
+    if (!tickers.length || insights.length) return
+    try {
+      const currentValue = computeCurrentValue()
+      const invested     = allocations.reduce((s, a) => s + a.amount, 0)
+      const portItems    = allocations.map(a => ({
+        ticker: a.ticker, name: a.name,
+        signal: a.signal || 'HOLD', confidence: a.confidence || 0,
+        change_pct_1d: a.change_pct_1d || 0,
+        rsi_value: a.indicators?.rsi_14 || 50,
+        composite_score: a.confidence || 0,
+        weight_pct: a.weight_pct,
+      }))
+      const res = await api.post('/api/generate-insights', { portfolio: portItems, portfolio_value: currentValue, invested_capital: invested })
+      setInsights(res.data.insights || [])
+    } catch (e) { console.error('Insights failed', e) }
+  }, [allocations, livePrices, shares, insights.length])
 
   useEffect(() => {
-    if (!portfolio) {
-      navigate('/')
-      return
-    }
-    fetchLivePrices().then(() => fetchInsights())
-    const interval = setInterval(fetchLivePrices, 30000)
-    return () => clearInterval(interval)
+    if (!portfolio) { navigate('/'); return }
+    fetchLivePrices().then(fetchInsights)
+    const iv = setInterval(fetchLivePrices, 30000)
+    return () => clearInterval(iv)
   }, [])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
     await fetchLivePrices()
-    await fetchInsights()
     setIsRefreshing(false)
   }
 
-  const getShares = (ticker) => shares[ticker] || 0
-  const getPrice = (ticker) => livePrices[ticker]?.current_price || 0
-  const getChange = (ticker) => livePrices[ticker]?.change_pct_1d || 0
-
   if (!portfolio) return null
 
-  const topHolding = [...allocations].sort((a, b) => b.weight_pct - a.weight_pct)[0]
-  const sparkData = portfolio.close_prices?.slice(-30).map((p, i) => ({ i, p })) || []
+  const currentValue    = computeCurrentValue()
+  const investedCapital = allocations.reduce((s, a) => s + a.amount, 0)
+  const totalReturn     = investedCapital > 0 ? ((currentValue - investedCapital) / investedCapital) * 100 : 0
+  const todayPnL        = allocations.reduce((tot, a) => {
+    const sh = shares[a.ticker] || 0
+    const lp = livePrices[a.ticker]
+    if (lp?.current_price && lp?.change_pct_1d != null)
+      tot += sh * lp.current_price * (lp.change_pct_1d / 100)
+    return tot
+  }, 0)
+
+  const buyCount  = allocations.filter(a => a.signal === 'BUY').length
+  const holdCount = allocations.filter(a => !a.signal || a.signal === 'HOLD').length
+  const sellCount = allocations.filter(a => a.signal === 'SELL').length
+
+  const scenario  = portfolio.scenario || {}
+  const expReturn = portfolio.expected_annual_return
+  const vol       = portfolio.portfolio_volatility
+  const sharpe    = portfolio.sharpe_ratio
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#2a78d6]" />
-          <span className="font-bold text-gray-900">QuantInvest</span>
-        </div>
-        <p className="text-xs text-gray-400">{timeAgo(lastUpdated)}</p>
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-gray-700">
+    <div className="min-h-screen" style={{ background: '#F4E1C1' }}>
+      {/* grid bg */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.022]" style={{
+        backgroundImage: 'linear-gradient(rgba(0,128,128,1) 1px,transparent 1px),linear-gradient(90deg,rgba(0,128,128,1) 1px,transparent 1px)',
+        backgroundSize: '56px 56px',
+      }} />
+
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-50 px-4 sm:px-6 py-3.5 flex items-center justify-between"
+        style={{ background: 'rgba(244,225,193,0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,128,128,0.12)' }}>
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg,#008080,#006666)' }}>
+            <span style={{ fontFamily: 'Syne,sans-serif', fontWeight: 800, color: '#F4E1C1', fontSize: '12px' }}>A</span>
+          </div>
+          <span style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, color: '#0d2b2b', fontSize: '15px', letterSpacing: '0.04em' }}>ASSETS</span>
+          <span className="hidden sm:block text-xs px-2 py-0.5 rounded-full"
+            style={{ fontFamily: 'Space Mono,monospace', color: '#008080', background: 'rgba(0,128,128,0.08)', border: '1px solid rgba(0,128,128,0.15)' }}>
             {profile?.investorType || 'Investor'}
           </span>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#2a78d6] text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {isRefreshing ? 'Refreshing...' : 'Refresh Now'}
+        </div>
+        <p className="text-xs" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.35)' }}>{timeAgo(lastUpdated)}</p>
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate('/')} className="px-3 py-1.5 text-xs rounded-xl transition-all"
+            style={{ border: '1.5px solid rgba(0,128,128,0.2)', color: 'rgba(13,43,43,0.55)', fontFamily: 'Space Grotesk,sans-serif' }}>
+            ← Back
+          </button>
+          <button onClick={handleRefresh} disabled={isRefreshing}
+            className="px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all disabled:opacity-50"
+            style={{ background: '#008080', color: '#F4E1C1', fontFamily: 'Space Grotesk,sans-serif' }}
+            onMouseEnter={e => { if (!isRefreshing) e.currentTarget.style.background = '#006666' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#008080' }}>
+            {isRefreshing ? 'Refreshing…' : '↻ Refresh'}
           </button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
-        {/* KPI Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <KpiCard
-            label="Portfolio Value"
-            value={fmtInr(currentValue)}
-            badge={`${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(1)}%`}
-            badgeColor={totalReturn >= 0 ? 'green' : 'red'}
-          />
-          <KpiCard
-            label="Today's P&L"
-            value={fmtInr(todayPnL)}
-            badge={`${todayPnL >= 0 ? '+' : ''}${todayPnL.toFixed(1)}%`}
-            badgeColor={todayPnL >= 0 ? 'green' : 'red'}
-          />
-          <KpiCard
-            label="Total Return"
-            value={fmtDelta(totalReturn) + '%'}
-            badge={fmtInr(currentValue - investedCapital)}
-            badgeColor={totalReturn >= 0 ? 'green' : 'red'}
-          />
-          <KpiCard
-            label="Sharpe Ratio"
-            value={portfolio?.sharpe_ratio?.toFixed(2) || '—'}
-            badge={portfolio?.sharpe_ratio >= 1 ? 'Good' : portfolio?.sharpe_ratio >= 0.5 ? 'Fair' : 'Low'}
-            badgeColor={portfolio?.sharpe_ratio >= 1 ? 'green' : portfolio?.sharpe_ratio >= 0.5 ? 'yellow' : 'red'}
-          />
+      <div className="relative max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
+
+        {/* ── KPI Row ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <KpiCard label="Portfolio Value"  value={fmtInr(currentValue)}              sub={fmtPct(totalReturn)}          positive={totalReturn >= 0} />
+          <KpiCard label="Today's P&L"      value={fmtInr(todayPnL)}                  sub={fmtPct(todayPnL / Math.max(investedCapital, 1) * 100)} positive={todayPnL >= 0} />
+          <KpiCard label="Expected Return"  value={expReturn ? `${expReturn}%` : '—'} sub={vol ? `Vol ${vol.toFixed(1)}%` : null} neutral />
+          <KpiCard label="Sharpe Ratio"     value={sharpe?.toFixed(2) || '—'}         sub={sharpe >= 1 ? 'Excellent' : sharpe >= 0.5 ? 'Good' : 'Fair'} neutral />
         </div>
 
-        {/* Main Area */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left — Stock Cards */}
-          <div className="flex-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {allocations.map((a) => {
-                const price = getPrice(a.ticker)
-                const chg = getChange(a.ticker)
-                const sh = getShares(a.ticker)
-                const currentStockValue = sh * price
-                const investedStockValue = a.amount
-                const progressPct = investedStockValue > 0 ? Math.min((currentStockValue / investedStockValue) * 100, 200) : 0
-                const sig = { signal: 'HOLD', confidence: 0, reason: '' }
+        {/* ── Signal strip ── */}
+        <div className="flex gap-3 flex-wrap">
+          {[
+            { label: 'BUY signals',  count: buyCount,  color: '#16a34a', bg: 'rgba(22,163,74,0.08)',  border: 'rgba(22,163,74,0.2)'  },
+            { label: 'HOLD signals', count: holdCount, color: '#008080', bg: 'rgba(0,128,128,0.07)',  border: 'rgba(0,128,128,0.18)' },
+            { label: 'SELL signals', count: sellCount, color: '#dc2626', bg: 'rgba(220,38,38,0.07)',  border: 'rgba(220,38,38,0.18)' },
+          ].map(s => (
+            <div key={s.label} className="flex items-center gap-2 px-4 py-2 rounded-xl"
+              style={{ background: s.bg, border: `1px solid ${s.border}` }}>
+              <span className="text-lg font-bold" style={{ fontFamily: 'Syne,sans-serif', color: s.color }}>{s.count}</span>
+              <span className="text-xs" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.5)' }}>{s.label}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl ml-auto"
+            style={{ background: 'rgba(0,128,128,0.05)', border: '1px solid rgba(0,128,128,0.12)' }}>
+            <span className="text-xs" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.45)' }}>
+              Invested: <strong style={{ color: '#0d2b2b' }}>{fmtInr(investedCapital)}</strong>
+            </span>
+          </div>
+        </div>
 
-                return (
-                  <div key={a.ticker} className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-semibold text-gray-900">{a.name}</p>
-                        <p className="text-xs text-gray-500">{a.ticker}</p>
+        {/* ── Main grid ── */}
+        <div className="flex flex-col lg:flex-row gap-5">
+
+          {/* LEFT — tabs */}
+          <div className="flex-1 min-w-0">
+            {/* tab bar */}
+            <div className="flex gap-1 mb-4 p-1 rounded-2xl" style={{ background: 'rgba(0,128,128,0.07)', border: '1px solid rgba(0,128,128,0.1)' }}>
+              {TABS.map(t => (
+                <button key={t.id} onClick={() => setActiveTab(t.id)}
+                  className="flex-1 py-2 text-xs font-semibold rounded-xl transition-all"
+                  style={{
+                    fontFamily: 'Space Grotesk,sans-serif',
+                    background: activeTab === t.id ? '#008080' : 'transparent',
+                    color: activeTab === t.id ? '#F4E1C1' : 'rgba(13,43,43,0.55)',
+                  }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── HOLDINGS ── */}
+            {activeTab === 'holdings' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {allocations.filter(a => a.amount > 0).map(a => {
+                  const price  = livePrices[a.ticker]?.current_price || 0
+                  const chg    = livePrices[a.ticker]?.change_pct_1d ?? a.change_pct_1d ?? 0
+                  const sh     = shares[a.ticker] || 0
+                  const curVal = sh * price || a.amount
+                  const pnl    = curVal - a.amount
+                  const pnlPct = a.amount > 0 ? (pnl / a.amount) * 100 : 0
+
+                  return (
+                    <div key={a.ticker} className="p-4 rounded-2xl space-y-3"
+                      style={{ background: 'rgba(244,225,193,0.7)', border: '1px solid rgba(0,128,128,0.12)' }}>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold text-sm" style={{ fontFamily: 'Syne,sans-serif', color: '#0d2b2b' }}>{a.name}</p>
+                          <p className="text-[11px] mt-0.5" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)' }}>
+                            {a.ticker.replace('.NS','')} · {a.weight_pct?.toFixed(1)}%
+                          </p>
+                        </div>
+                        <SignalBadge signal={a.signal} />
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                        {a.weight_pct.toFixed(1)}%
-                      </span>
-                    </div>
 
-                    <div className="flex items-baseline justify-between">
-                      <p className="text-xl font-bold text-gray-900">
-                        {price ? fmtInr(price) : '—'}
-                      </p>
-                      {chg != null && (
-                        <span className={`flex items-center gap-0.5 text-sm font-semibold ${chg >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className="flex items-baseline justify-between">
+                        <p style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '1.15rem', color: '#0d2b2b' }}>
+                          {price ? fmtInr(price) : '—'}
+                        </p>
+                        <span style={{ fontFamily: 'Space Mono,monospace', fontSize: '12px', fontWeight: 600, color: chg >= 0 ? '#16a34a' : '#dc2626' }}>
                           {chg >= 0 ? '▲' : '▼'} {Math.abs(chg).toFixed(2)}%
                         </span>
+                      </div>
+
+                      <div className="flex justify-between text-xs" style={{ fontFamily: 'Space Mono,monospace' }}>
+                        <span style={{ color: 'rgba(13,43,43,0.45)' }}>{fmtInr(a.amount)} invested</span>
+                        <span style={{ color: pnl >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                          {pnl >= 0 ? '+' : ''}{fmtInr(pnl)} ({fmtPct(pnlPct)})
+                        </span>
+                      </div>
+
+                      {a.close_prices?.length > 2 && (
+                        <MiniSparkline data={a.close_prices} color={pnl >= 0 ? '#16a34a' : '#dc2626'} />
+                      )}
+
+                      <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'rgba(0,128,128,0.1)' }}>
+                        <div className="h-full rounded-full transition-all"
+                          style={{ width: `${Math.min(Math.max((curVal / a.amount) * 100, 0), 100)}%`, background: pnl >= 0 ? '#16a34a' : '#dc2626' }} />
+                      </div>
+
+                      {a.confidence > 0 && (
+                        <p className="text-[11px]" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)' }}>
+                          {(a.confidence * 100).toFixed(0)}% model confidence
+                        </p>
+                      )}
+                      {a.reason && (
+                        <p className="text-xs leading-relaxed" style={{ color: 'rgba(13,43,43,0.55)', fontFamily: 'Space Grotesk,sans-serif', fontStyle: 'italic' }}>
+                          {a.reason}
+                        </p>
+                      )}
+                      {a.high_52w > 0 && (
+                        <div className="text-[11px] flex justify-between" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.38)' }}>
+                          <span>52W L: {fmtInr(a.low_52w)}</span>
+                          <span>52W H: {fmtInr(a.high_52w)}</span>
+                        </div>
                       )}
                     </div>
-
-                    <p className="text-xs text-gray-500">
-                      {fmtInr(a.amount)} invested · {sh.toFixed(3)} shares
-                    </p>
-
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          currentStockValue >= investedStockValue ? 'bg-green-500' : 'bg-red-400'
-                        }`}
-                        style={{ width: `${Math.min(progressPct, 100)}%` }}
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${SIGNAL_BG[sig.signal] || 'bg-gray-100'}`}>
-                        {sig.signal}
-                      </span>
-                      <span className="text-xs text-gray-500">{(sig.confidence * 100).toFixed(0)}% confidence</span>
-                    </div>
-
-                    {sig.reason && (
-                      <p className="text-xs text-gray-400 leading-relaxed">{sig.reason}</p>
-                    )}
-
-                    <div className="flex gap-2 pt-1">
-                      <button className="text-xs font-medium text-[#2a78d6] hover:underline">Explain This →</button>
-                      <button className="text-xs font-medium text-red-500 hover:underline">Sell</button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Right — Sidebar */}
-          <div className="w-full lg:w-[35%] space-y-4">
-            {/* Risk Meter */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <p className="text-sm font-semibold text-gray-900 mb-3">Portfolio Risk</p>
-              <div className="relative h-3 bg-gradient-to-r from-green-400 via-yellow-400 to-red-500 rounded-full overflow-hidden">
-                <div
-                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-gray-400 rounded-full shadow"
-                  style={{
-                    left: `${Math.min(Math.max((portfolio?.portfolio_volatility || 15) * 3, 2), 98)}%`,
-                  }}
-                />
-              </div>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                {portfolio?.portfolio_volatility < 10 ? 'Low Risk' : portfolio?.portfolio_volatility < 20 ? 'Medium Risk' : 'High Risk'}
-              </p>
-            </div>
-
-            {/* Goal Tracker */}
-            {(profile?.goal || profile?.capital) && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <p className="text-sm font-semibold text-gray-900 mb-1">
-                  {profile?.goal || `Target: ${fmtInr(investedCapital * 1.16)} by 12 months`}
-                </p>
-                <div className="w-full h-2 bg-gray-100 rounded-full mt-3 mb-2 overflow-hidden">
-                  <div
-                    className="h-full bg-[#2a78d6] rounded-full transition-all"
-                    style={{ width: `${Math.min((currentValue / (investedCapital * 1.16)) * 100, 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500">
-                  {fmtInr(currentValue)} of {fmtInr(investedCapital * 1.16)} · {currentValue >= investedCapital * 1.16 ? '🎉 Target reached!' : currentValue >= investedCapital ? '✅ On track' : '⚠ Behind schedule'}
-                </p>
+                  )
+                })}
               </div>
             )}
 
-            {/* Sparkline */}
-            {sparkData.length > 1 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <p className="text-sm font-semibold text-gray-900 mb-2">
-                  {topHolding?.name || 'Portfolio'} Trend
+            {/* ── ML SIGNALS ── */}
+            {activeTab === 'signals' && (
+              <div className="space-y-2.5">
+                {allocations.length === 0 && (
+                  <p className="text-sm text-center py-8" style={{ color: 'rgba(13,43,43,0.4)', fontFamily: 'Space Mono,monospace' }}>No signal data available</p>
+                )}
+                {allocations.map(a => {
+                  const ind = a.indicators || {}
+                  return (
+                    <div key={a.ticker} className="p-4 rounded-2xl" style={{ background: 'rgba(244,225,193,0.7)', border: '1px solid rgba(0,128,128,0.12)' }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="font-semibold text-sm" style={{ fontFamily: 'Syne,sans-serif', color: '#0d2b2b' }}>{a.name}</p>
+                          <p className="text-[11px]" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)' }}>{a.ticker.replace('.NS','')}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <SignalBadge signal={a.signal} />
+                          {a.confidence > 0 && (
+                            <span className="text-xs px-2 py-0.5 rounded-full"
+                              style={{ background: 'rgba(0,128,128,0.07)', color: '#008080', fontFamily: 'Space Mono,monospace' }}>
+                              {(a.confidence * 100).toFixed(0)}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {Object.keys(ind).length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          {[
+                            { label: 'RSI 14',    val: ind.rsi_14?.toFixed(1),     alert: ind.rsi_14 > 70 ? 'overbought' : ind.rsi_14 < 30 ? 'oversold' : null },
+                            { label: 'MACD',      val: ind.macd_diff?.toFixed(3)                                                                                  },
+                            { label: 'BB %',      val: ind.bb_pct != null ? `${(ind.bb_pct*100).toFixed(0)}%` : null                                              },
+                            { label: 'vs 50MA',   val: ind.price_vs_50ma  != null ? fmtPct(ind.price_vs_50ma)  : null                                             },
+                            { label: 'vs 200MA',  val: ind.price_vs_200ma != null ? fmtPct(ind.price_vs_200ma) : null                                             },
+                            { label: 'Vol ratio', val: ind.volume_ratio?.toFixed(2)                                                                               },
+                          ].filter(x => x.val != null).map(x => (
+                            <div key={x.label} className="p-2 rounded-xl text-center" style={{ background: 'rgba(0,128,128,0.05)' }}>
+                              <p className="text-[10px] uppercase" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.38)', letterSpacing: '0.1em' }}>{x.label}</p>
+                              <p className="text-xs font-bold mt-0.5" style={{
+                                fontFamily: 'Space Mono,monospace',
+                                color: x.alert === 'overbought' ? '#dc2626' : x.alert === 'oversold' ? '#16a34a' : '#0d2b2b',
+                              }}>{x.val}</p>
+                              {x.alert && <p className="text-[9px]" style={{ color: x.alert === 'overbought' ? '#dc2626' : '#16a34a' }}>{x.alert}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {a.reason && (
+                        <p className="text-xs leading-relaxed" style={{ color: 'rgba(13,43,43,0.55)', fontFamily: 'Space Grotesk,sans-serif', fontStyle: 'italic' }}>
+                          {a.reason}
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* ── AI INSIGHTS ── */}
+            {activeTab === 'insights' && (
+              <div className="space-y-3">
+                {insights.length === 0 && (
+                  <p className="text-sm text-center py-8" style={{ color: 'rgba(13,43,43,0.4)', fontFamily: 'Space Mono,monospace' }}>Generating insights…</p>
+                )}
+                {insights.map((ins, i) => {
+                  const st = INSIGHT_STYLE[ins.type] || INSIGHT_STYLE.tip
+                  return (
+                    <div key={i} className="flex items-start gap-3 p-4 rounded-2xl"
+                      style={{ background: st.bg, border: `1px solid ${st.border}` }}>
+                      <span className="text-base shrink-0 mt-0.5">{st.icon}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-xs font-bold" style={{ fontFamily: 'Syne,sans-serif', color: '#0d2b2b' }}>{ins.stock || 'Portfolio'}</p>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium capitalize"
+                            style={{ background: st.bg, border: `1px solid ${st.border}`, color: st.label, fontFamily: 'Space Mono,monospace' }}>
+                            {ins.type}
+                          </span>
+                        </div>
+                        <p className="text-sm leading-relaxed" style={{ color: 'rgba(13,43,43,0.65)', fontFamily: 'Space Grotesk,sans-serif' }}>{ins.text}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* ── SCENARIOS ── */}
+            {activeTab === 'scenarios' && (
+              <div className="space-y-3">
+                <p className="text-xs mb-2" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)' }}>
+                  1-year projection · Expected return {expReturn}% · Volatility {vol?.toFixed(1)}%
                 </p>
-                <ResponsiveContainer width="100%" height={80}>
-                  <LineChart data={sparkData}>
-                    <Line
-                      type="monotone"
-                      dataKey="p"
-                      stroke="#2a78d6"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {[
+                  { label: 'Bull Case', desc: 'Market performs above expectations',           value: scenario.bull, color: '#16a34a', bg: 'rgba(22,163,74,0.07)',  border: 'rgba(22,163,74,0.2)',  icon: '🚀' },
+                  { label: 'Base Case', desc: 'Market performs as modelled',                   value: scenario.base, color: '#008080', bg: 'rgba(0,128,128,0.06)',  border: 'rgba(0,128,128,0.18)', icon: '📈' },
+                  { label: 'Bear Case', desc: 'Market underperforms with high volatility',     value: scenario.bear, color: '#dc2626', bg: 'rgba(220,38,38,0.06)',  border: 'rgba(220,38,38,0.18)', icon: '🐻' },
+                ].map(sc => {
+                  const ret = investedCapital > 0 ? ((sc.value - investedCapital) / investedCapital * 100) : 0
+                  return (
+                    <div key={sc.label} className="p-5 rounded-2xl" style={{ background: sc.bg, border: `1px solid ${sc.border}` }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span>{sc.icon}</span>
+                          <p className="font-bold text-sm" style={{ fontFamily: 'Syne,sans-serif', color: '#0d2b2b' }}>{sc.label}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold" style={{ fontFamily: 'Syne,sans-serif', fontSize: '1.1rem', color: sc.color }}>{fmtInr(sc.value)}</p>
+                          <p className="text-xs" style={{ fontFamily: 'Space Mono,monospace', color: sc.color }}>{fmtPct(ret)}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs" style={{ fontFamily: 'Space Grotesk,sans-serif', color: 'rgba(13,43,43,0.5)' }}>{sc.desc}</p>
+                      <div className="mt-3 w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.08)' }}>
+                        <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max(ret + 50, 5), 95)}%`, background: sc.color }} />
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {/* allocation donut */}
+                <div className="p-5 rounded-2xl" style={{ background: 'rgba(244,225,193,0.7)', border: '1px solid rgba(0,128,128,0.12)' }}>
+                  <p className="text-xs uppercase mb-4" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)', letterSpacing: '0.13em' }}>Allocation Breakdown</p>
+                  <div className="flex flex-col sm:flex-row items-center gap-6">
+                    <PieChart width={160} height={160}>
+                      <Pie data={allocations.filter(a => a.weight_pct > 0)} dataKey="weight_pct" nameKey="name" cx={80} cy={80} innerRadius={48} outerRadius={72} strokeWidth={0}>
+                        {allocations.filter(a => a.weight_pct > 0).map((_, i) => (
+                          <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={v => [`${v.toFixed(1)}%`, 'Weight']} />
+                    </PieChart>
+                    <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+                      {allocations.filter(a => a.weight_pct > 0).map((a, i) => (
+                        <div key={a.ticker} className="flex items-center gap-1.5">
+                          <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                          <span className="text-xs" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.55)' }}>
+                            {a.ticker.replace('.NS','')} {a.weight_pct?.toFixed(1)}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT sidebar */}
+          <div className="w-full lg:w-[300px] shrink-0 space-y-4">
+
+            {/* Portfolio health */}
+            <div className="p-5 rounded-2xl space-y-4" style={{ background: 'rgba(244,225,193,0.7)', border: '1px solid rgba(0,128,128,0.12)' }}>
+              <p className="text-xs uppercase" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)', letterSpacing: '0.13em' }}>Portfolio Health</p>
+              <RiskMeter volatility={vol} />
+              <div style={{ height: '1px', background: 'rgba(0,128,128,0.1)' }} />
+              {[
+                { label: 'Expected Return', val: expReturn ? `${expReturn}%` : '—' },
+                { label: 'Volatility',      val: vol ? `${vol.toFixed(1)}%` : '—'  },
+                { label: 'Sharpe Ratio',    val: sharpe?.toFixed(2) || '—'         },
+                { label: 'Holdings',        val: allocations.filter(a => a.amount > 0).length },
+              ].map(r => (
+                <div key={r.label} className="flex justify-between">
+                  <span className="text-xs" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)' }}>{r.label}</span>
+                  <span className="text-xs font-bold" style={{ fontFamily: 'Space Mono,monospace', color: '#0d2b2b' }}>{r.val}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Goal tracker */}
+            {profile?.capital && (
+              <div className="p-5 rounded-2xl space-y-3" style={{ background: 'rgba(244,225,193,0.7)', border: '1px solid rgba(0,128,128,0.12)' }}>
+                <p className="text-xs uppercase" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)', letterSpacing: '0.13em' }}>Goal Tracker</p>
+                {profile.goal && (
+                  <p className="text-xs italic" style={{ color: 'rgba(13,43,43,0.55)', fontFamily: 'Space Grotesk,sans-serif' }}>"{profile.goal}"</p>
+                )}
+                <div>
+                  <div className="flex justify-between text-xs mb-1" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.45)' }}>
+                    <span>{fmtInr(currentValue)}</span>
+                    <span>Target: {fmtInr(investedCapital * 1.16)}</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'rgba(0,128,128,0.1)' }}>
+                    <div className="h-full rounded-full transition-all"
+                      style={{ width: `${Math.min((currentValue / (investedCapital * 1.16)) * 100, 100)}%`, background: '#008080' }} />
+                  </div>
+                  <p className="text-xs mt-1.5" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)' }}>
+                    {currentValue >= investedCapital * 1.16 ? '✓ Target reached!' : currentValue >= investedCapital ? '↑ On track' : '⚠ Behind schedule'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Quick insights preview */}
+            {insights.length > 0 && activeTab !== 'insights' && (
+              <div className="p-5 rounded-2xl space-y-2.5" style={{ background: 'rgba(244,225,193,0.7)', border: '1px solid rgba(0,128,128,0.12)' }}>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)', letterSpacing: '0.13em' }}>Top Insights</p>
+                  <button onClick={() => setActiveTab('insights')} className="text-xs" style={{ color: '#008080', fontFamily: 'Space Mono,monospace' }}>See all →</button>
+                </div>
+                {insights.slice(0, 3).map((ins, i) => {
+                  const st = INSIGHT_STYLE[ins.type] || INSIGHT_STYLE.tip
+                  return (
+                    <div key={i} className="flex gap-2 p-2.5 rounded-xl" style={{ background: st.bg, border: `1px solid ${st.border}` }}>
+                      <span className="text-sm shrink-0">{st.icon}</span>
+                      <p className="text-xs leading-relaxed" style={{ color: 'rgba(13,43,43,0.6)', fontFamily: 'Space Grotesk,sans-serif' }}>{ins.text}</p>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
         </div>
-
-        {/* AI Insight Feed */}
-        {insights.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Live Insights</h2>
-            <div className="space-y-3">
-              {insights.slice(0, 5).map((ins, i) => {
-                const style = INSIGHT_ICONS[ins.type] || INSIGHT_ICONS.tip
-                return (
-                  <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border ${style.bg}`}>
-                    <span className={`text-base shrink-0 ${style.iconColor}`}>{style.icon}</span>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{ins.stock || 'Portfolio'}</p>
-                      <p className="text-xs text-gray-600 mt-0.5">{ins.text}</p>
-                    </div>
-                    <span className="text-xs text-gray-400 ml-auto shrink-0">just now</span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
       </div>
-    </div>
-  )
-}
-
-function KpiCard({ label, value, badge, badgeColor }) {
-  const badgeClasses = {
-    green: 'bg-green-100 text-green-800',
-    red: 'bg-red-100 text-red-800',
-    yellow: 'bg-yellow-100 text-yellow-800',
-  }
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-      <p className="text-lg sm:text-xl font-bold text-gray-900">{value}</p>
-      {badge != null && (
-        <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-semibold ${badgeClasses[badgeColor] || 'bg-gray-100 text-gray-700'}`}>
-          {badge}
-        </span>
-      )}
     </div>
   )
 }
