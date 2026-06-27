@@ -30,3 +30,12 @@ celery.conf.update(
 def ping() -> str:
     """Trivial task to verify the worker is wired up."""
     return "pong from ASSETS"
+
+
+@celery.task(bind=True, name="assets.run_full_analysis")
+def run_full_analysis(self, portfolio_id: str) -> None:
+    """Trigger the full async analysis pipeline."""
+    import asyncio
+    from app.services.analysis_pipeline import run_full_analysis_async
+    asyncio.run(run_full_analysis_async(portfolio_id, task_id=self.request.id))
+

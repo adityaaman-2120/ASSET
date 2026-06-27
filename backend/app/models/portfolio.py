@@ -67,6 +67,13 @@ class Portfolio(Base):
         nullable=False,
         default=PortfolioStatus.pending,
     )
+    # 0-100 analysis progress, updated by the run_full_analysis task.
+    progress: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    # Full computed analysis output (weights, metrics, stress test, critique,
+    # charts data, per-ticker predictions, task_id, error).
+    results: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
