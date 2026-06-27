@@ -1,0 +1,12 @@
+Async Alembic environment for ASSETS.
+
+The database URL is read from backend/.env via app.core.config, so you do not
+need to set sqlalchemy.url in alembic.ini.
+
+Common commands (run from the backend/ directory with the venv active):
+
+    alembic revision --autogenerate -m "create users table"
+    alembic upgrade head
+    alembic downgrade -1
+    alembic current
+    alembic history
