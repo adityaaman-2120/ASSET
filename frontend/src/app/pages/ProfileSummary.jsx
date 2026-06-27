@@ -53,6 +53,7 @@ function Tag({ label, value }) {
 }
 
 const PIPELINE_STEPS = [
+  'Detecting market regime…',
   'Fetching live stock data from NSE…',
   'Running ML signal predictions…',
   'Optimising portfolio with Markowitz…',
@@ -112,6 +113,7 @@ export default function ProfileSummary() {
   const setPortfolio = useInvestorStore(s => s.setPortfolio)
   const setStocks    = useInvestorStore(s => s.setStocks)
   const setSignals   = useInvestorStore(s => s.setSignals)
+  const setRegime    = useInvestorStore(s => s.setRegime)
 
   const [loading, setLoading]       = useState(true)
   const [summary, setSummary]       = useState(null)
@@ -164,14 +166,23 @@ export default function ProfileSummary() {
       const capital = parseCapital(profile.capital)
       const riskLevel = parseRiskLevel(profile.risk)
 
-      // 0 — fetch stocks
+      // 0 — detect market regime
       setBuildStep(0)
+      let detectedRegime = 'SIDEWAYS'
+      try {
+        const regimeRes = await api.get('/api/detect-regime')
+        detectedRegime = regimeRes.data.regime || 'SIDEWAYS'
+        setRegime(regimeRes.data)
+      } catch (_) { /* use SIDEWAYS fallback */ }
+
+      // 1 — fetch stocks
+      setBuildStep(1)
       const stocksRes = await api.post('/api/fetch-stocks', { sectors: useSectors, period: '6mo' })
       const stocks = stocksRes.data.stocks || []
       setStocks(stocks)
 
-      // 1 — predict signals
-      setBuildStep(1)
+      // 2 — predict signals
+      setBuildStep(2)
       let signals = []
       if (stocks.length > 0) {
         try {
@@ -195,8 +206,8 @@ export default function ProfileSummary() {
         setSignals(signals)
       }
 
-      // 2 — optimise portfolio
-      setBuildStep(2)
+      // 3 — optimise portfolio
+      setBuildStep(3)
       const signalMap = {}
       signals.forEach(s => { signalMap[s.ticker] = s })
       const buyTickers = signals.filter(s => s.signal === 'BUY').map(s => s.ticker)
@@ -204,7 +215,7 @@ export default function ProfileSummary() {
         ? buyTickers.slice(0, 10)
         : stocks.sort((a, b) => (b.change_pct_7d ?? 0) - (a.change_pct_7d ?? 0)).slice(0, 10).map(s => s.ticker)
 
-      const optRes = await api.post('/api/optimize-portfolio', { tickers: candidateTickers, capital, risk_level: riskLevel })
+      const optRes = await api.post('/api/optimize-portfolio', { tickers: candidateTickers, capital, risk_level: riskLevel, regime: detectedRegime })
       const portfolio = optRes.data
 
       // enrich allocations with signal + indicator data
@@ -223,8 +234,8 @@ export default function ProfileSummary() {
         low_52w: stockMap[a.ticker]?.low_52w || 0,
       }))
 
-      // 3 — generate insights
-      setBuildStep(3)
+      // 4 — generate insights
+      setBuildStep(4)
       try {
         const insightPayload = portfolio.allocations.map(a => ({
           ticker: a.ticker, name: a.name,
@@ -243,7 +254,7 @@ export default function ProfileSummary() {
       } catch (_) { portfolio.insights = [] }
 
       setPortfolio(portfolio)
-      setBuildStep(4)
+      setBuildStep(5)
       await new Promise(r => setTimeout(r, 700))
       navigate('/dashboard')
     } catch (err) {

@@ -9,3 +9,4 @@ pyportfolioopt==1.6.0
 joblib==1.5.2
 python-dotenv==1.2.2
 anthropic==0.112.0
+hmmlearn==0.3.3

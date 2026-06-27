@@ -99,6 +99,7 @@ export default function Dashboard() {
   const navigate    = useNavigate()
   const portfolio   = useInvestorStore(s => s.portfolio)
   const profile     = useInvestorStore(s => s.profile)
+  const regime      = useInvestorStore(s => s.regime)
 
   const [livePrices,   setLivePrices]   = useState({})
   const [insights,     setInsights]     = useState([])
@@ -234,6 +235,77 @@ export default function Dashboard() {
       </header>
 
       <div className="relative max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
+
+        {/* ── Regime Banner ── */}
+        {regime && (() => {
+          const r = regime.regime || 'SIDEWAYS'
+          const REGIME_META = {
+            BULL:            { emoji: '📈', label: 'Market is Going Up',      sublabel: '(Bullish Regime)',          color: '#16a34a', bg: 'rgba(22,163,74,0.07)',   border: 'rgba(22,163,74,0.22)'  },
+            BEAR:            { emoji: '🐻', label: 'Market is Falling',        sublabel: '(Bearish Regime)',          color: '#dc2626', bg: 'rgba(220,38,38,0.07)',  border: 'rgba(220,38,38,0.22)' },
+            HIGH_VOLATILITY: { emoji: '⚡', label: 'Market is Very Shaky',     sublabel: '(High Volatility Regime)',  color: '#dc2626', bg: 'rgba(220,38,38,0.07)',  border: 'rgba(220,38,38,0.22)' },
+            SIDEWAYS:        { emoji: '↔',  label: 'Market is Moving Sideways', sublabel: '(Range-Bound Regime)',     color: '#008080', bg: 'rgba(0,128,128,0.07)',  border: 'rgba(0,128,128,0.22)' },
+          }
+          const meta = REGIME_META[r] || REGIME_META.SIDEWAYS
+          const conf = regime.confidence != null ? regime.confidence : 0
+          const confLabel = conf >= 0.8 ? 'Very sure' : conf >= 0.6 ? 'Fairly sure' : conf >= 0.4 ? 'Somewhat sure' : 'Uncertain'
+          return (
+            <div className="rounded-2xl px-5 py-4"
+              style={{ background: meta.bg, border: `1px solid ${meta.border}` }}>
+              {/* top row */}
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                <div className="flex items-center gap-3 flex-1">
+                  <span style={{ fontSize: '28px', lineHeight: 1 }}>{meta.emoji}</span>
+                  <div>
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <p className="font-bold" style={{ fontFamily: 'Syne,sans-serif', fontSize: '1.15rem', color: meta.color }}>
+                        {meta.label}
+                      </p>
+                      <p className="text-xs" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.4)' }}>
+                        {meta.sublabel}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-sm" style={{ fontFamily: 'Space Grotesk,sans-serif', color: 'rgba(13,43,43,0.7)' }}>
+                      {regime.action}
+                    </p>
+                    <p className="mt-1 text-xs" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.38)' }}>
+                      Based on NIFTY 50 trend over the last 2 years — not today's movement. A single green day doesn't change the overall market phase.
+                    </p>
+                  </div>
+                </div>
+                {/* stats pills */}
+                <div className="flex items-center gap-3 shrink-0 flex-wrap">
+                  <div className="px-3 py-2 rounded-xl text-center" style={{ background: 'rgba(13,43,43,0.05)', border: '1px solid rgba(13,43,43,0.08)' }}>
+                    <p className="text-[10px] uppercase mb-0.5" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.38)', letterSpacing: '0.1em' }}>
+                      How sure? <span style={{ textTransform: 'none', letterSpacing: 0 }}>(Confidence)</span>
+                    </p>
+                    <p className="font-bold text-sm" style={{ fontFamily: 'Space Mono,monospace', color: meta.color }}>
+                      {confLabel} · {(conf * 100).toFixed(0)}%
+                    </p>
+                  </div>
+                  <div className="px-3 py-2 rounded-xl text-center" style={{ background: 'rgba(13,43,43,0.05)', border: '1px solid rgba(13,43,43,0.08)' }}>
+                    <p className="text-[10px] uppercase mb-0.5" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.38)', letterSpacing: '0.1em' }}>Last checked</p>
+                    <p className="font-bold text-sm" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.55)' }}>
+                      {regime.as_of || '—'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {/* how it changed your portfolio */}
+              <div className="mt-3 pt-3 flex items-center gap-2" style={{ borderTop: `1px solid ${meta.border}` }}>
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`, fontFamily: 'Space Mono,monospace' }}>
+                  AI ADAPTED YOUR PORTFOLIO
+                </span>
+                <p className="text-xs" style={{ fontFamily: 'Space Grotesk,sans-serif', color: 'rgba(13,43,43,0.5)' }}>
+                  {(r === 'BEAR' || r === 'HIGH_VOLATILITY')
+                    ? 'Your stock weights were reduced to 70% and 30% was moved to cash (Cash Reserve) to protect your money.'
+                    : r === 'BULL'
+                    ? 'Your full capital is invested in stocks to capture the upward trend (maximise risk-adjusted return).'
+                    : 'Standard Markowitz allocation applied — balanced mix across your chosen sectors.'}
+                </p>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* ── KPI Row ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from pypfopt import EfficientFrontier, risk_models, expected_returns
 from indicators import compute_indicators
 from ml_model import predict_signal, FEATURE_KEYS
+from regime import detect_regime
 
 load_dotenv()
 
@@ -115,6 +116,7 @@ class OptimizeRequest(BaseModel):
   tickers: list[str]
   capital: float
   risk_level: str = "medium"
+  regime: str = "SIDEWAYS"
 
 class InsightsPortfolioItem(BaseModel):
   ticker: str
@@ -285,8 +287,18 @@ def predict_signals_endpoint(body: PredictSignalsRequest):
   return { "predictions": results }
 
 
+_REGIME_NOTES = {
+  "HIGH_VOLATILITY": "Weights scaled to 70% equity; 30% held as cash buffer to limit drawdown.",
+  "BEAR":            "Weights scaled to 70% equity; 30% held as cash buffer for capital preservation.",
+  "BULL":            "Full equity deployment — maximising risk-adjusted return in a trending market.",
+  "SIDEWAYS":        "Balanced allocation — standard Markowitz optimisation applied.",
+}
+
 @app.post("/api/optimize-portfolio")
 def optimize_portfolio(body: OptimizeRequest):
+  regime = body.regime.upper() if body.regime else "SIDEWAYS"
+  defensive = regime in ("HIGH_VOLATILITY", "BEAR")
+
   try:
     prices = yf.download(body.tickers, period="1y", interval="1d", auto_adjust=True, progress=False)
     if isinstance(prices.columns, pd.MultiIndex):
@@ -302,7 +314,9 @@ def optimize_portfolio(body: OptimizeRequest):
     S = risk_models.sample_cov(prices)
     ef = EfficientFrontier(mu, S)
 
-    if body.risk_level == "low":
+    if defensive:
+      ef.min_volatility()
+    elif body.risk_level == "low":
       ef.min_volatility()
     elif body.risk_level == "high":
       ef.efficient_return(target_return=0.20)
@@ -321,28 +335,62 @@ def optimize_portfolio(body: OptimizeRequest):
 
   capital = body.capital
   allocations = []
-  for ticker in body.tickers:
-    w = weights.get(ticker, 0.0)
-    weight_pct = round(w * 100, 2)
-    amount = round(capital * w, 2)
+
+  if defensive:
+    equity_capital = capital * 0.7
+    for ticker in body.tickers:
+      w = weights.get(ticker, 0.0)
+      weight_pct = round(w * 70, 2)
+      amount = round(equity_capital * w, 2)
+      allocations.append({
+        "ticker": ticker,
+        "name": TICKER_TO_NAME.get(ticker, ticker),
+        "weight_pct": weight_pct,
+        "amount": amount,
+      })
     allocations.append({
-      "ticker": ticker,
-      "name": TICKER_TO_NAME.get(ticker, ticker),
-      "weight_pct": weight_pct,
-      "amount": amount,
+      "ticker": "CASH",
+      "name": "Cash Reserve",
+      "weight_pct": 30.0,
+      "amount": round(capital * 0.3, 2),
     })
+  else:
+    for ticker in body.tickers:
+      w = weights.get(ticker, 0.0)
+      weight_pct = round(w * 100, 2)
+      amount = round(capital * w, 2)
+      allocations.append({
+        "ticker": ticker,
+        "name": TICKER_TO_NAME.get(ticker, ticker),
+        "weight_pct": weight_pct,
+        "amount": amount,
+      })
 
   return {
     "allocations": allocations,
     "expected_annual_return": round(float(exp_return) * 100, 2),
     "portfolio_volatility": round(float(vol) * 100, 2),
     "sharpe_ratio": round(float(sharpe), 3),
+    "regime_applied": regime,
+    "regime_note": _REGIME_NOTES.get(regime, _REGIME_NOTES["SIDEWAYS"]),
     "scenario": {
       "bull": round(capital * (1 + exp_return + vol), 2),
       "base": round(capital * (1 + exp_return), 2),
       "bear": round(capital * (1 + exp_return - 1.5 * vol), 2),
     },
   }
+
+
+@app.get("/api/detect-regime")
+def detect_regime_endpoint():
+  cache_key = "regime_detection"
+  now = datetime.utcnow()
+  cached = _cache.get(cache_key)
+  if cached and (now - cached["ts"]).total_seconds() < 1800:
+    return cached["data"]
+  data = detect_regime()
+  _cache[cache_key] = {"ts": now, "data": data}
+  return data
 
 
 @app.get("/api/live-prices")
