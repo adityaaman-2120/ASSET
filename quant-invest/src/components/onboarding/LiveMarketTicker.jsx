@@ -15,6 +15,7 @@ function timeAgo(dateStr) {
 }
 
 export default function LiveMarketTicker() {
+  const [loading, setLoading] = useState(true)
   const [index, setIndex] = useState(null)
   const [stocks, setStocks] = useState([])
   const [gainers, setGainers] = useState([])
@@ -24,7 +25,8 @@ export default function LiveMarketTicker() {
   const [collapsed, setCollapsed] = useState(false)
   const intervalRef = useRef(null)
 
-  const fetchData = async () => {
+  const fetchData = async (isSilent = false) => {
+    if (!isSilent) setLoading(true)
     try {
       const res = await api.get('/api/market-summary')
       const data = res.data
@@ -37,12 +39,14 @@ export default function LiveMarketTicker() {
     } catch (e) {
       setError('Could not load market data')
       console.error('Market summary fetch failed', e)
+    } finally {
+      if (!isSilent) setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchData()
-    intervalRef.current = setInterval(fetchData, 30000)
+    fetchData(false)
+    intervalRef.current = setInterval(() => fetchData(true), 30000)
     return () => clearInterval(intervalRef.current)
   }, [])
 
@@ -64,7 +68,15 @@ export default function LiveMarketTicker() {
 
       {!collapsed && (
         <div className="p-4 sm:p-5 space-y-4">
-          {error ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-10 space-y-3">
+              <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <p className="text-xs text-gray-500 font-medium animate-pulse">Loading live market prices...</p>
+            </div>
+          ) : error ? (
             <p className="text-xs text-red-500 bg-red-50 rounded-lg p-3 border border-red-200">
               {error}
             </p>

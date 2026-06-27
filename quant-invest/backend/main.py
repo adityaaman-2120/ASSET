@@ -375,7 +375,7 @@ def live_prices(tickers: str = ""):
       "ticker": t,
       "current_price": round(float(price), 2) if price is not None else None,
       "change_pct_1d": round(float(change_pct), 2) if change_pct is not None else None,
-      "last_updated": now.isoformat(),
+      "last_updated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
     _price_cache[t] = {"ts": now, "data": entry}
     results.append(entry)
@@ -387,64 +387,79 @@ def live_prices(tickers: str = ""):
 
 @app.get("/api/market-summary")
 def market_summary():
-    now = datetime.utcnow()
+    last_updated_str = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    # Fetch NIFTY50 index
-    index_data = None
+    tickers = ["^NSEI"] + MARKET_WATCHLIST
+    
     try:
-        nifty = yf.Ticker("^NSEI")
-        nhist = nifty.history(period="5d")
-        if not nhist.empty:
-            ilatest = nhist.iloc[-1]
-            iprev = nhist.iloc[-2]["Close"] if len(nhist) > 1 else ilatest["Close"]
-            index_data = {
-                "symbol": "NIFTY50",
-                "last_price": round(float(ilatest["Close"]), 2),
-                "change": round(float(ilatest["Close"] - iprev), 2),
-                "change_percent": round(((float(ilatest["Close"]) - iprev) / iprev) * 100, 2),
-                "high": round(float(ilatest["High"]), 2),
-                "low": round(float(ilatest["Low"]), 2),
-                "volume": int(ilatest["Volume"]),
-            }
+        df = yf.download(tickers, period="5d", auto_adjust=True, progress=False)
     except Exception as e:
-        log.warning("Failed to fetch NIFTY50: %s", e)
+        log.error("Bulk yfinance download failed: %s", e)
+        df = pd.DataFrame()
 
-    # Fetch watchlist stocks
-    stocks = []
-    for ticker in MARKET_WATCHLIST:
+    index_data = None
+    if not df.empty and "^NSEI" in df["Close"]:
         try:
-            tk = yf.Ticker(ticker)
-            info = tk.fast_info
-            hist = tk.history(period="2d")
-            if hist.empty:
-                continue
-
-            latest = hist.iloc[-1]
-            prev_close = float(hist.iloc[-2]["Close"]) if len(hist) > 1 else float(latest["Close"])
-            last_price = float(info.last_price) if hasattr(info, 'last_price') else float(latest["Close"])
-            change = last_price - prev_close
-            change_pct = (change / prev_close * 100) if prev_close > 0 else 0.0
-
-            symbol = ticker.replace(".NS", "")
-            name = TICKER_TO_NAME.get(ticker, symbol)
-            sector = SECTOR_TO_NAME.get(ticker, "Unknown")
-
-            stocks.append({
-                "symbol": symbol,
-                "ticker": ticker,
-                "name": name,
-                "sector": sector,
-                "last_price": round(last_price, 2),
-                "change": round(change, 2),
-                "change_percent": round(change_pct, 2),
-                "high": round(float(latest["High"]), 2),
-                "low": round(float(latest["Low"]), 2),
-                "volume": int(latest["Volume"]),
-            })
+            nifty_close = df["Close"]["^NSEI"].dropna()
+            if not nifty_close.empty:
+                latest_close = nifty_close.iloc[-1]
+                prev_close = nifty_close.iloc[-2] if len(nifty_close) > 1 else latest_close
+                
+                nifty_high = df["High"]["^NSEI"].dropna()
+                nifty_low = df["Low"]["^NSEI"].dropna()
+                nifty_vol = df["Volume"]["^NSEI"].dropna()
+                
+                index_data = {
+                    "symbol": "NIFTY50",
+                    "last_price": round(float(latest_close), 2),
+                    "change": round(float(latest_close - prev_close), 2),
+                    "change_percent": round(((float(latest_close) - prev_close) / prev_close) * 100, 2) if prev_close > 0 else 0.0,
+                    "high": round(float(nifty_high.iloc[-1]), 2) if not nifty_high.empty else 0.0,
+                    "low": round(float(nifty_low.iloc[-1]), 2) if not nifty_low.empty else 0.0,
+                    "volume": int(nifty_vol.iloc[-1]) if not nifty_vol.empty else 0,
+                }
         except Exception as e:
-            log.warning("Failed to fetch %s: %s", ticker, e)
+            log.warning("Failed to parse NIFTY50: %s", e)
 
-    # Top gainers and losers (inspired by ASSET's get_top_movers)
+    stocks = []
+    if not df.empty:
+        for ticker in MARKET_WATCHLIST:
+            try:
+                if ticker not in df["Close"]:
+                    continue
+                closes = df["Close"][ticker].dropna()
+                if closes.empty:
+                    continue
+                
+                latest_close = closes.iloc[-1]
+                prev_close = closes.iloc[-2] if len(closes) > 1 else latest_close
+                
+                highs = df["High"][ticker].dropna()
+                lows = df["Low"][ticker].dropna()
+                vols = df["Volume"][ticker].dropna()
+                
+                change = latest_close - prev_close
+                change_pct = (change / prev_close * 100) if prev_close > 0 else 0.0
+                
+                symbol = ticker.replace(".NS", "")
+                name = TICKER_TO_NAME.get(ticker, symbol)
+                sector = SECTOR_TO_NAME.get(ticker, "Unknown")
+                
+                stocks.append({
+                    "symbol": symbol,
+                    "ticker": ticker,
+                    "name": name,
+                    "sector": sector,
+                    "last_price": round(float(latest_close), 2),
+                    "change": round(float(change), 2),
+                    "change_percent": round(float(change_pct), 2),
+                    "high": round(float(highs.iloc[-1]), 2) if not highs.empty else 0.0,
+                    "low": round(float(lows.iloc[-1]), 2) if not lows.empty else 0.0,
+                    "volume": int(vols.iloc[-1]) if not vols.empty else 0,
+                })
+            except Exception as e:
+                log.warning("Failed to parse %s: %s", ticker, e)
+
     sorted_stocks = sorted(stocks, key=lambda s: s["change_percent"], reverse=True)
     gainers = [s for s in sorted_stocks if s["change_percent"] > 0][:5]
     losers = [s for s in reversed(sorted_stocks) if s["change_percent"] < 0][:5]
@@ -454,7 +469,7 @@ def market_summary():
         "stocks": stocks,
         "gainers": gainers,
         "losers": losers,
-        "last_updated": now.isoformat(),
+        "last_updated": last_updated_str,
     }
 
 
@@ -512,4 +527,4 @@ def generate_insights(body: GenerateInsightsRequest):
   else:
     insights = FALLBACK_INSIGHTS
 
-  return {"insights": insights, "generated_at": datetime.utcnow().isoformat()}
+  return {"insights": insights, "generated_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}
