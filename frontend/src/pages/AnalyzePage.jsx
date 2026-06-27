@@ -1,113 +1,296 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Compass, HelpCircle, ArrowRight } from 'lucide-react'
+import {
+  Compass, Sparkles, ArrowRight, AlertCircle, Loader2,
+  ChevronRight, FileText,
+} from 'lucide-react'
 import api from '../lib/api'
 import Card from '../components/Card'
 import Button from '../components/Button'
 
-const examples = [
-  'I want to invest ₹5 Lakhs for capital growth over 5 years. I am comfortable with high risk, but I want to avoid tobacco and defense stocks.',
-  'Invest ₹20,000 monthly for retirement in 15 years. Keep risk medium and focus on ESG friendly energy and healthcare.',
-  'I have ₹1 Lakh to invest. I target regular dividend income, want a low-risk strategy, and want to avoid technology companies.',
+// ─── Example prompts ─────────────────────────────────────────────────────────
+
+const EXAMPLE_PROMPTS = [
+  {
+    label: 'Capital Growth',
+    icon: '📈',
+    text: 'Invest ₹5 Lakhs over 5 years for maximum capital growth. High risk is fine. Avoid fossil fuels and tobacco.',
+  },
+  {
+    label: 'Retirement Income',
+    icon: '🏖️',
+    text: 'Building retirement corpus — ₹50,000 per month SIP for 15 years. Medium risk, prefer healthcare and FMCG. ESG only.',
+  },
+  {
+    label: 'Conservative',
+    icon: '🛡️',
+    text: '₹2 Lakh, low risk, 3-year horizon. I want regular dividend income. Avoid defence and gambling sectors.',
+  },
+  {
+    label: 'Aggressive Growth',
+    icon: '🚀',
+    text: 'I have ₹10 Lakh. 7 years. High risk. Focus on technology, fintech, and pharma. Maximise Sharpe ratio.',
+  },
+  {
+    label: 'ELSS / Tax Saving',
+    icon: '💰',
+    text: '₹1.5 Lakh into ELSS for tax saving under 80C. 3-year lock-in, medium risk, no specific sector preference.',
+  },
+  {
+    label: 'Short-term',
+    icon: '⚡',
+    text: 'Park ₹25,000 for 12 months. Very low risk — capital preservation is my #1 priority. No equity.',
+  },
 ]
+
+const MAX_CHARS = 500
+
+// ─── Loading overlay ──────────────────────────────────────────────────────────
+
+function AnalyzingOverlay() {
+  const steps = [
+    { label: 'Parsing natural language goal…', delay: 0 },
+    { label: 'Running LLM brief extraction (Groq / Llama)…', delay: 1200 },
+    { label: 'Compiling optimizer constraints…', delay: 2400 },
+    { label: 'Creating portfolio record…', delay: 3200 },
+  ]
+  const [step, setStep] = React.useState(0)
+
+  React.useEffect(() => {
+    const timers = steps.map((s, i) =>
+      setTimeout(() => setStep(i), s.delay)
+    )
+    return () => timers.forEach(clearTimeout)
+  }, [])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A0E1A]/90 backdrop-blur-sm">
+      <div className="text-center space-y-6 max-w-sm px-6">
+        {/* Animated ring */}
+        <div className="relative mx-auto w-20 h-20">
+          <div className="absolute inset-0 rounded-full border-4 border-slate-800" />
+          <div
+            className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#00D4FF]"
+            style={{ animation: 'spin 1s linear infinite' }}
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Sparkles className="h-8 w-8 text-[#00D4FF]" />
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-bold text-white">Structuring your brief…</h3>
+          <p className="text-sm text-slate-400 mt-1">Our AI is reading your goal and compiling optimizer constraints</p>
+        </div>
+
+        {/* Step indicators */}
+        <div className="space-y-2 text-left">
+          {steps.map((s, i) => (
+            <div key={i} className={`flex items-center gap-2.5 text-xs transition-all duration-500 ${
+              i <= step ? 'text-white' : 'text-slate-600'
+            }`}>
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
+                i < step
+                  ? 'bg-emerald-500'
+                  : i === step
+                  ? 'bg-[#00D4FF] animate-pulse'
+                  : 'bg-slate-800'
+              }`}>
+                {i < step ? (
+                  <span className="text-[8px] font-black">✓</span>
+                ) : i === step ? (
+                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                ) : null}
+              </span>
+              <span className={i === step ? 'text-[#00D4FF] font-semibold' : ''}>{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AnalyzePage() {
   const navigate = useNavigate()
+  const textareaRef = useRef(null)
   const [goalText, setGoalText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const charCount = goalText.length
+  const charRemaining = MAX_CHARS - charCount
+  const isOverLimit = charCount > MAX_CHARS
+  const isEmpty = !goalText.trim()
+
+  function fillExample(text) {
+    setGoalText(text)
+    textareaRef.current?.focus()
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!goalText.trim()) return
+    if (isEmpty || isOverLimit) return
 
     setError('')
-    setLoading(false)
     setLoading(true)
     try {
       const { data } = await api.post('/api/v1/analysis/analyze', {
         goal_text: goalText,
       })
-
-      // Navigate to /analyze/confirm page, passing data in route state
       navigate('/analyze/confirm', {
         state: {
           brief: data.brief,
           constraints: data.constraints,
           portfolio_id: data.portfolio_id,
+          goal_text: goalText,
         },
       })
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Failed to extract investment constraints. Please refine your goal and try again.')
-    } finally {
+      setError(
+        err?.response?.data?.detail ||
+          'Failed to extract investment constraints. Try rephrasing — include amount, risk level, and time horizon.'
+      )
       setLoading(false)
     }
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-2">
-          <Compass className="h-8 w-8 text-[#00D4FF]" />
-          Analyze Investment Goal
-        </h1>
-        <p className="text-sm text-slate-400 mt-2">
-          Describe your financial goals, risk appetite, constraints, and sector preferences in plain English. Our AI will compile optimizer constraints and structure your brief.
-        </p>
-      </div>
+    <>
+      {loading && <AnalyzingOverlay />}
 
-      <Card className="border-slate-800 shadow-2xl">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-300">
-              What is your investment goal?
-            </label>
-            <textarea
-              value={goalText}
-              onChange={(e) => setGoalText(e.target.value)}
-              required
-              rows={5}
-              placeholder="e.g. I want to invest 2 Lakhs. I have a 3-year horizon, prefer high growth, and want to exclude fossil fuel sectors..."
-              className="w-full rounded-lg border border-slate-800 bg-slate-900/60 p-4 text-sm text-white focus:border-[#00D4FF] focus:outline-none focus:ring-1 focus:ring-[#00D4FF] resize-none"
-            />
+      <div className="max-w-2xl mx-auto py-8 px-4 space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#00D4FF]/10 border border-[#00D4FF]/20 mb-2">
+            <Compass className="h-7 w-7 text-[#00D4FF]" />
           </div>
+          <h1 className="text-4xl font-black text-white tracking-tight">
+            Describe Your Goal
+          </h1>
+          <p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
+            Write your investment goal in plain English. Mention your budget, risk appetite, time horizon, and any sectors to avoid or prefer.
+          </p>
+        </div>
 
-          {error && (
-            <p className="text-sm text-red-400 bg-red-950/30 border border-red-500/20 rounded-lg p-3">
-              {error}
-            </p>
-          )}
+        {/* Main input card */}
+        <Card className="border-slate-800/80 shadow-2xl shadow-black/40 space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-xs font-black uppercase tracking-wider text-slate-400 mb-2.5">
+                Your Investment Goal
+              </label>
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  value={goalText}
+                  onChange={(e) => setGoalText(e.target.value)}
+                  rows={5}
+                  placeholder={'Describe your investment goal… e.g. "Grow ₹1L over 2 years, medium risk, avoid fossil fuels"'}
+                  className={`w-full rounded-xl border bg-slate-900/60 p-4 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-1 resize-none transition-colors leading-relaxed ${
+                    isOverLimit
+                      ? 'border-red-500/60 focus:border-red-500 focus:ring-red-500/30'
+                      : 'border-slate-800 focus:border-[#00D4FF] focus:ring-[#00D4FF]/20'
+                  }`}
+                />
+                {/* Character counter */}
+                <div className={`absolute bottom-3 right-3 text-[10px] font-mono font-bold tabular-nums ${
+                  isOverLimit
+                    ? 'text-red-400'
+                    : charRemaining < 80
+                    ? 'text-amber-400'
+                    : 'text-slate-600'
+                }`}>
+                  {charCount}/{MAX_CHARS}
+                </div>
+              </div>
+              {isOverLimit && (
+                <p className="mt-1.5 text-[11px] text-red-400 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {Math.abs(charRemaining)} characters over limit. Please shorten your goal.
+                </p>
+              )}
+            </div>
 
-          <Button
-            type="submit"
-            disabled={loading || !goalText.trim()}
-            variant="primary"
-            className="w-full py-3"
-          >
-            {loading ? 'Compiling brief & constraints…' : 'Structure Investment Brief'}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </form>
-      </Card>
+            {/* Error */}
+            {error && (
+              <div className="flex items-start gap-2.5 p-3.5 bg-red-950/30 border border-red-500/20 rounded-xl text-sm text-red-300">
+                <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
 
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-300 flex items-center gap-1.5">
-          <HelpCircle className="h-4 w-4 text-[#7C3AED]" />
-          Example Goal Prompts
-        </h3>
-        <div className="space-y-3">
-          {examples.map((example, idx) => (
+            {/* Submit */}
             <button
-              key={idx}
-              type="button"
-              onClick={() => setGoalText(example)}
-              className="w-full text-left p-3.5 rounded-lg border border-slate-800/80 bg-slate-900/20 text-xs text-slate-400 hover:bg-slate-900/50 hover:text-slate-200 transition-colors cursor-pointer"
+              type="submit"
+              disabled={loading || isEmpty || isOverLimit}
+              className={`group w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
+                loading || isEmpty || isOverLimit
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-[#00D4FF] to-[#7C3AED] text-[#0A0E1A] hover:shadow-[0_0_24px_rgba(0,212,255,0.3)] hover:scale-[1.01] active:scale-[0.99]'
+              }`}
             >
-              {example}
+              <Sparkles className="h-4 w-4" />
+              Structure Investment Brief
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
-          ))}
+          </form>
+
+          {/* What the AI extracts */}
+          <div className="border-t border-slate-800 pt-4">
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2.5">
+              What our AI extracts from your text
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                ['💰', 'Amount', '₹1L, ₹50K…'],
+                ['⚖️', 'Risk Level', 'low / medium / high'],
+                ['📅', 'Horizon', '1–30 years'],
+                ['🚫', 'Exclusions', 'fossil fuels, tobacco…'],
+              ].map(([icon, label, hint]) => (
+                <div key={label} className="bg-slate-900/40 rounded-lg p-2.5 text-center">
+                  <span className="text-base">{icon}</span>
+                  <p className="text-[10px] font-bold text-white mt-0.5">{label}</p>
+                  <p className="text-[9px] text-slate-500 mt-0.5">{hint}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* Example prompts */}
+        <div className="space-y-3">
+          <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <FileText className="h-3.5 w-3.5 text-[#7C3AED]" />
+            Quick-fill examples — click any chip to load
+          </h3>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {EXAMPLE_PROMPTS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => fillExample(p.text)}
+                className="group text-left p-3.5 rounded-xl border border-slate-800 bg-slate-900/20 hover:bg-slate-900/60 hover:border-slate-700 transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-base">{p.icon}</span>
+                  <span className="text-xs font-bold text-white group-hover:text-[#00D4FF] transition-colors">
+                    {p.label}
+                  </span>
+                  <ChevronRight className="h-3 w-3 text-slate-600 ml-auto group-hover:text-[#00D4FF] group-hover:translate-x-0.5 transition-all" />
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">
+                  {p.text}
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
