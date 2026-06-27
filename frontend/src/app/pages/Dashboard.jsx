@@ -262,8 +262,12 @@ export default function Dashboard() {
             SIDEWAYS:        { emoji: '↔',  label: 'Market is Moving Sideways', sublabel: '(Range-Bound Regime)',     color: '#008080', bg: 'rgba(0,128,128,0.07)',  border: 'rgba(0,128,128,0.22)' },
           }
           const meta = REGIME_META[r] || REGIME_META.SIDEWAYS
-          const conf = regime.confidence != null ? regime.confidence : 0
-          const confLabel = conf >= 0.8 ? 'Very sure' : conf >= 0.6 ? 'Fairly sure' : conf >= 0.4 ? 'Somewhat sure' : 'Uncertain'
+          const rawConf = regime.confidence != null ? regime.confidence : 0
+          // HMMs on financial data naturally produce near-100% posterior probabilities
+          // (the Viterbi path is deterministic once a state is entered).
+          // We show a 3-bar signal strength instead of the raw number to avoid misleading users.
+          const signalBars = rawConf >= 0.9 ? 3 : rawConf >= 0.6 ? 2 : 1
+          const signalLabel = signalBars === 3 ? 'Strong signal' : signalBars === 2 ? 'Moderate signal' : 'Weak signal'
           return (
             <div className="rounded-2xl px-5 py-4"
               style={{ background: meta.bg, border: `1px solid ${meta.border}` }}>
@@ -284,18 +288,27 @@ export default function Dashboard() {
                       {regime.action}
                     </p>
                     <p className="mt-1 text-xs" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.38)' }}>
-                      Based on NIFTY 50 trend over the last 2 years — not today's movement. A single green day doesn't change the overall market phase.
+                      Reads 2 years of NIFTY 50 daily data — not today's movement. One green day doesn't change the overall market phase.
                     </p>
                   </div>
                 </div>
                 {/* stats pills */}
                 <div className="flex items-center gap-3 shrink-0 flex-wrap">
                   <div className="px-3 py-2 rounded-xl text-center" style={{ background: 'rgba(13,43,43,0.05)', border: '1px solid rgba(13,43,43,0.08)' }}>
-                    <p className="text-[10px] uppercase mb-0.5" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.38)', letterSpacing: '0.1em' }}>
-                      How sure? <span style={{ textTransform: 'none', letterSpacing: 0 }}>(Confidence)</span>
+                    <p className="text-[10px] uppercase mb-1" style={{ fontFamily: 'Space Mono,monospace', color: 'rgba(13,43,43,0.38)', letterSpacing: '0.1em' }}>
+                      Signal strength
                     </p>
-                    <p className="font-bold text-sm" style={{ fontFamily: 'Space Mono,monospace', color: meta.color }}>
-                      {confLabel} · {(conf * 100).toFixed(0)}%
+                    <div className="flex items-center gap-1 justify-center mb-0.5">
+                      {[1,2,3].map(b => (
+                        <div key={b} style={{
+                          width: 10, height: b === 1 ? 8 : b === 2 ? 12 : 16,
+                          borderRadius: 2,
+                          background: b <= signalBars ? meta.color : 'rgba(13,43,43,0.12)',
+                        }} />
+                      ))}
+                    </div>
+                    <p className="text-[10px] font-semibold" style={{ fontFamily: 'Space Mono,monospace', color: meta.color }}>
+                      {signalLabel}
                     </p>
                   </div>
                   <div className="px-3 py-2 rounded-xl text-center" style={{ background: 'rgba(13,43,43,0.05)', border: '1px solid rgba(13,43,43,0.08)' }}>
