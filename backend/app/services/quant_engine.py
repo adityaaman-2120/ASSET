@@ -353,7 +353,7 @@ class QuantEngine:
         mu = np.array([predictions[t]["predicted_return"] * (TRADING_DAYS / FORWARD_HORIZON)
                        for t in included])
         vols = np.array([self._asset_vol(predictions[t]) for t in included])
-        Sigma = self._covariance(included, predictions, vols, rho, constraints)
+        Sigma = self._covariance(included, vols, rho, constraints)
 
         # Kelly position sizing: full-Kelly vector f = Σ⁻¹ μ, long-only normalised.
         kelly_raw = np.linalg.pinv(Sigma) @ mu
@@ -367,10 +367,14 @@ class QuantEngine:
             kelly_cap = np.full(n, max_weight)
         kelly_cap = np.maximum(kelly_cap, min(max_weight, 0.02))
         upper = np.minimum(max_weight, kelly_cap)
-        if upper.sum() < 1.0:  # keep the simplex feasible
+        # Keep the simplex feasible. If Kelly caps are too tight, fall back to
+        # max_weight; if even that can't sum to 1 (too few names for the cap),
+        # raise the floor to equal-weight so concentration stays bounded at 1/n
+        # rather than collapsing the cap entirely.
+        if upper.sum() < 1.0:
             upper = np.full(n, max_weight)
-            if upper.sum() < 1.0:
-                upper = np.ones(n)
+        if upper.sum() < 1.0:
+            upper = np.maximum(upper, 1.0 / n)
         bounds = [(0.0, float(u)) for u in upper]
 
         w_prev = np.array([constraints.get("current_weights", {}).get(t, 0.0) for t in included])
@@ -419,7 +423,7 @@ class QuantEngine:
         return float(np.clip(vol, 0.05, 1.5))
 
     @staticmethod
-    def _covariance(included, predictions, vols, rho, constraints) -> np.ndarray:
+    def _covariance(included, vols, rho, constraints) -> np.ndarray:
         n = len(included)
         provided = constraints.get("cov_matrix")
         if provided:
