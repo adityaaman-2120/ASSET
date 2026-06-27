@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useInvestorStore } from '../store/investorStore'
+import LiveMarketTicker from '../components/onboarding/LiveMarketTicker'
 
 const SECTIONS = [
   { label: 'Welcome' },
@@ -216,19 +217,23 @@ export default function Onboarding() {
         {step > 0 && <ProgressDots current={step} />}
 
         {step === 0 && (
-          <div className="text-center py-12">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
-              Tell us about yourself
-            </h1>
-            <p className="text-gray-500 mb-8 max-w-sm mx-auto">
-              We'll build your personal quant strategy in 60 seconds
-            </p>
-            <button
-              onClick={() => setStep(1)}
-              className="px-8 py-3 text-sm font-semibold rounded-xl bg-[#2a78d6] text-white hover:bg-blue-700 transition-colors"
-            >
-              Get Started →
-            </button>
+          <div>
+            <LiveMarketTicker />
+
+            <div className="text-center py-8">
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+                Tell us about yourself
+              </h1>
+              <p className="text-gray-500 mb-8 max-w-sm mx-auto">
+                We'll build your personal quant strategy in 60 seconds
+              </p>
+              <button
+                onClick={() => setStep(1)}
+                className="px-8 py-3 text-sm font-semibold rounded-xl bg-[#2a78d6] text-white hover:bg-blue-700 transition-colors"
+              >
+                Get Started →
+              </button>
+            </div>
           </div>
         )}
 

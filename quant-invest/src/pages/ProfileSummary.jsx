@@ -160,19 +160,21 @@ export default function ProfileSummary() {
 
     ;(async () => {
       try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
+        const res = await fetch('https://api.x.ai/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': import.meta.env.VITE_ANTHROPIC_KEY,
-            'anthropic-version': '2023-06-01',
+            'Authorization': `Bearer ${import.meta.env.VITE_XAI_KEY}`,
           },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
+            model: 'grok-2',
             max_tokens: 400,
-            system:
-              'You are a financial profile summarizer. Given structured investor form data, return ONLY a valid JSON object with no markdown, no backticks, no extra text. The JSON must have exactly these keys: displayCapital (string), riskLabel (string like \'Medium Risk\'), horizonLabel (string), sectorsList (array of strings), styleLabel (string), summaryParagraph (2 warm reassuring sentences about this investor\'s approach).',
             messages: [
+              {
+                role: 'system',
+                content:
+                  'You are a financial profile summarizer. Given structured investor form data, return ONLY a valid JSON object with no markdown, no backticks, no extra text. The JSON must have exactly these keys: displayCapital (string), riskLabel (string like \'Medium Risk\'), horizonLabel (string), sectorsList (array of strings), styleLabel (string), summaryParagraph (2 warm reassuring sentences about this investor\'s approach).',
+              },
               {
                 role: 'user',
                 content: `Investor form data: ${JSON.stringify(profile)}. Generate the profile JSON now.`,
@@ -187,7 +189,7 @@ export default function ProfileSummary() {
         }
 
         const data = await res.json()
-        let raw = data.content?.[0]?.text || ''
+        let raw = data.choices?.[0]?.message?.content || ''
         raw = raw.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim()
         const parsed = JSON.parse(raw)
 
