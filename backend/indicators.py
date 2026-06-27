@@ -112,17 +112,35 @@ def compute_indicators(df: pd.DataFrame) -> dict:
   if vol_ratio > 1.0:
     bullish_count += 1
 
+  # --- Volatility (20d) ---
+  volatility_20d = float(close.pct_change().rolling(20).std().iloc[-1]) * 100
+  volatility_20d = _safe(volatility_20d, 1.5)
+
+  # --- MACD diff (line − signal) ---
+  macd_diff_val = _safe(macd_line - signal_line, 0.0)
+
+  # --- price vs MAs (%) ---
+  price_vs_50ma  = _safe((close_last - ma50)  / ma50  * 100 if ma50  > 0 else 0.0, 0.0)
+  price_vs_200ma = _safe((close_last - ma200) / ma200 * 100 if ma200 > 0 else 0.0, 0.0)
+
   return {
+    # human-readable display fields
     "rsi_value": round(rsi_val, 1),
     "rsi_signal": rsi_signal,
     "macd_signal": macd_signal,
     "bb_signal": bb_signal,
-    "bb_pct": round(float(pct_b), 2),
     "ma_trend": trend,
     "ma_cross": cross,
     "ma50": round(float(ma50), 2),
     "ma200": round(float(ma200), 2),
     "volume_signal": vol_signal,
-    "volume_ratio": round(float(vol_ratio), 1),
     "composite_score": round(bullish_count / total_buckets, 2),
+    # ML feature fields — names must match FEATURE_KEYS in ml_model.py
+    "rsi_14":          round(rsi_val, 4),
+    "macd_diff":       round(macd_diff_val, 4),
+    "bb_pct":          round(float(pct_b), 4),
+    "price_vs_50ma":   round(price_vs_50ma, 4),
+    "price_vs_200ma":  round(price_vs_200ma, 4),
+    "volume_ratio":    round(float(vol_ratio), 4),
+    "volatility_20d":  round(volatility_20d, 4),
   }
