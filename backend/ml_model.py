@@ -64,27 +64,37 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 def label_signals(df: pd.DataFrame) -> pd.Series:
   c = df["Close"]
   fwd_ret = c.shift(-10) / c - 1
+  # per-ticker quantile cutoffs: guarantees ~1/3 each class for this ticker
+  # fixed ±5% threshold collapses to all-HOLD in flat/bear markets
+  valid = fwd_ret.dropna()
+  low_cut  = float(valid.quantile(0.33))
+  high_cut = float(valid.quantile(0.67))
   labels = pd.Series(1, index=df.index, dtype=int)
-  labels[fwd_ret > 0.05] = 2
-  labels[fwd_ret < -0.05] = 0
+  labels[fwd_ret >= high_cut] = 2   # BUY: top third of forward returns
+  labels[fwd_ret <= low_cut]  = 0   # SELL: bottom third
   return labels
 
 
 def train_model():
-  tickers = ["TCS.NS", "HDFCBANK.NS", "RELIANCE.NS", "SUNPHARMA.NS", "INFY.NS"]
+  tickers = ["TCS.NS", "HDFCBANK.NS", "RELIANCE.NS", "SUNPHARMA.NS", "INFY.NS",
+             "WIPRO.NS", "ICICIBANK.NS", "KOTAKBANK.NS", "AXISBANK.NS", "BAJFINANCE.NS"]
   all_X = []
 
   for t in tickers:
     print(f"Downloading {t}...")
-    df = yf.download(t, period="2y", interval="1d", auto_adjust=True, progress=False)
+    df = yf.download(t, period="3y", interval="1d", auto_adjust=True, progress=False)
     if df.empty:
       print(f"  Skipping {t} — no data")
       continue
     if isinstance(df.columns, pd.MultiIndex):
       df.columns = df.columns.droplevel(1)
 
+    # drop last 10 rows: fwd_ret is NaN there (no 10-day future exists)
+    df = df.iloc[:-10]
+
     feats = build_features(df)
     labels = label_signals(df)
+
     ticker_X = feats.copy()
     ticker_X["_label"] = labels
     ticker_X["_ticker"] = t
@@ -92,29 +102,41 @@ def train_model():
 
   combined = pd.concat(all_X)
   combined = combined.apply(pd.to_numeric, errors="coerce")
-  combined = combined.dropna(subset=FEATURE_KEYS)
+  combined = combined.dropna(subset=FEATURE_KEYS + ["_label"])
 
   X = combined[FEATURE_KEYS].values
   y = combined["_label"].values.astype(int)
 
-  print(f"Total samples: {len(combined)}, class distribution:\n{pd.Series(y).value_counts().sort_index()}")
+  print(f"\nTotal samples: {len(combined)}")
+  print(f"Class distribution (0=SELL, 1=HOLD, 2=BUY):\n{pd.Series(y).value_counts().sort_index()}")
+  assert len(set(y)) == 3, f"Expected 3 classes, got: {set(y)}"
 
   X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
   )
 
+  # compute per-sample weights so minority classes (BUY/SELL) aren't drowned out
+  from sklearn.utils.class_weight import compute_sample_weight
+  sample_weights = compute_sample_weight("balanced", y_train)
+
   model = XGBClassifier(
-    n_estimators=100,
+    n_estimators=200,
     max_depth=4,
-    use_label_encoder=False,
+    learning_rate=0.05,
+    objective="multi:softprob",
+    num_class=3,
     eval_metric="mlogloss",
     random_state=42,
+    subsample=0.8,
+    colsample_bytree=0.8,
   )
-  model.fit(X_train, y_train)
+  model.fit(X_train, y_train, sample_weight=sample_weights)
 
   y_pred = model.predict(X_test)
   acc = accuracy_score(y_test, y_pred)
   print(f"Test accuracy: {acc:.4f}")
+  dist = pd.Series(y_pred).map({0: "SELL", 1: "HOLD", 2: "BUY"}).value_counts()
+  print(f"Prediction distribution on test set:\n{dist}")
 
   joblib.dump(model, "stock_model.pkl")
   print("Model saved to stock_model.pkl")

@@ -17,6 +17,7 @@ from indicators import compute_indicators
 from ml_model import predict_signal, FEATURE_KEYS
 from regime import detect_regime
 from stress_test import run_stress_test
+from devils_advocate import analyze_portfolio_risks, devils_advocate_critique
 
 load_dotenv()
 
@@ -137,6 +138,19 @@ class GenerateInsightsRequest(BaseModel):
 class StressTestRequest(BaseModel):
   allocations: list[dict]
 
+class DevilsAdvocateRequest(BaseModel):
+  allocations: list[dict]
+  regime: str = "SIDEWAYS"
+
+class WhatIfRequest(BaseModel):
+  base_tickers: list[str]
+  capital: float
+  risk_level: str = "medium"
+  regime: str = "SIDEWAYS"
+  remove_tickers: list[str] = []
+  add_tickers: list[str] = []
+  extra_capital: float = 0
+
 _model = None
 
 app = FastAPI(title="QuantInvest API")
@@ -228,7 +242,7 @@ def load_ml_model():
 
 
 def _llm_reason(ticker: str, signal: str, confidence: float, feats: dict) -> str:
-  api_key = os.getenv("XAI_API_KEY", "")
+  api_key = os.getenv("GROQ_API_KEY", "")
   if not api_key:
     return _fallback_reason(feats)
 
@@ -242,13 +256,13 @@ def _llm_reason(ticker: str, signal: str, confidence: float, feats: dict) -> str
   try:
     with httpx.Client(timeout=15) as client:
       resp = client.post(
-        "https://api.x.ai/v1/chat/completions",
+        "https://api.groq.com/openai/v1/chat/completions",
         headers={
           "Authorization": f"Bearer {api_key}",
           "Content-Type": "application/json",
         },
         json={
-          "model": "grok-2",
+          "model": "llama-3.3-70b-versatile",
           "max_tokens": 100,
           "messages": [
             {"role": "system", "content": "You are a helpful financial advisor. Explain signals briefly for retail investors."},
@@ -298,13 +312,15 @@ _REGIME_NOTES = {
   "SIDEWAYS":        "Balanced allocation — standard Markowitz optimisation applied.",
 }
 
-@app.post("/api/optimize-portfolio")
-def optimize_portfolio(body: OptimizeRequest):
-  regime = body.regime.upper() if body.regime else "SIDEWAYS"
+
+def _run_optimization(tickers: list[str], capital: float, risk_level: str, regime: str = "SIDEWAYS") -> dict:
+  """Core optimizer. Single source of truth used by both /api/optimize-portfolio and /api/what-if."""
+  regime = (regime or "SIDEWAYS").upper()
   defensive = regime in ("HIGH_VOLATILITY", "BEAR")
 
   try:
-    prices = yf.download(body.tickers, period="1y", interval="1d", auto_adjust=True, progress=False)
+    # 2-year lookback: more data = more stable mu/cov estimates
+    prices = yf.download(tickers, period="2y", interval="1d", auto_adjust=True, progress=False)
     if isinstance(prices.columns, pd.MultiIndex):
       prices = prices.xs("Close", axis=1, level=0)
     else:
@@ -314,43 +330,60 @@ def optimize_portfolio(body: OptimizeRequest):
     if prices.empty or prices.shape[1] < 2:
       raise ValueError("Not enough valid price data after cleaning")
 
-    mu = expected_returns.mean_historical_return(prices)
-    S = risk_models.sample_cov(prices)
-    ef = EfficientFrontier(mu, S)
+    # EMA-weighted returns: recent data counts more, avoids 1-bad-year distortion
+    mu = expected_returns.ema_historical_return(prices, span=500)
+    # Ledoit-Wolf shrinkage: regularises covariance so small portfolios stay well-conditioned
+    S = risk_models.CovarianceShrinkage(prices).ledoit_wolf()
+
+    def _solve(objective: str) -> tuple:
+      """Run one EfficientFrontier solve; return (weights, exp_return, vol, sharpe)."""
+      ef = EfficientFrontier(mu, S)
+      if objective == "min_vol":
+        ef.min_volatility()
+      elif objective == "max_quadratic":
+        ef.max_quadratic_utility(risk_aversion=2)
+      elif objective == "max_sharpe":
+        ef.max_sharpe()
+      elif objective == "efficient_return":
+        ef.efficient_return(target_return=0.20)
+      w = ef.clean_weights()
+      r, v, sh = ef.portfolio_performance(verbose=False)
+      return w, r, v, sh
 
     if defensive:
-      ef.min_volatility()
-    elif body.risk_level == "low":
-      ef.min_volatility()
-    elif body.risk_level == "high":
-      ef.efficient_return(target_return=0.20)
+      weights, exp_return, vol, sharpe = _solve("min_vol")
+      # min_volatility can produce negative expected return in a bear market;
+      # fall back to a utility-balanced objective that still favours low risk
+      # but won't recommend a portfolio expected to lose money
+      if exp_return < 0:
+        try:
+          weights, exp_return, vol, sharpe = _solve("max_quadratic")
+        except Exception:
+          pass  # keep min_vol result if quadratic also fails
+    elif risk_level == "low":
+      weights, exp_return, vol, sharpe = _solve("min_vol")
+    elif risk_level == "high":
+      weights, exp_return, vol, sharpe = _solve("efficient_return")
     else:
-      ef.max_sharpe()
-
-    weights = ef.clean_weights()
-    perf = ef.portfolio_performance(verbose=False)
-    exp_return, vol, sharpe = perf
+      weights, exp_return, vol, sharpe = _solve("max_sharpe")
 
   except Exception as e:
     log.warning("Optimization failed, using equal weights: %s", e)
-    n = len(body.tickers)
-    weights = {t: 1.0 / n for t in body.tickers}
+    n = len(tickers)
+    weights = {t: 1.0 / n for t in tickers}
     exp_return, vol, sharpe = 0.08, 0.15, 0.5
 
-  capital = body.capital
   allocations = []
 
   if defensive:
     equity_capital = capital * 0.7
-    for ticker in body.tickers:
+    for ticker in tickers:
       w = weights.get(ticker, 0.0)
-      weight_pct = round(w * 70, 2)
-      amount = round(equity_capital * w, 2)
       allocations.append({
         "ticker": ticker,
         "name": TICKER_TO_NAME.get(ticker, ticker),
-        "weight_pct": weight_pct,
-        "amount": amount,
+        "weight_pct": round(w * 70, 2),
+        "amount": round(equity_capital * w, 2),
       })
     allocations.append({
       "ticker": "CASH",
@@ -359,15 +392,13 @@ def optimize_portfolio(body: OptimizeRequest):
       "amount": round(capital * 0.3, 2),
     })
   else:
-    for ticker in body.tickers:
+    for ticker in tickers:
       w = weights.get(ticker, 0.0)
-      weight_pct = round(w * 100, 2)
-      amount = round(capital * w, 2)
       allocations.append({
         "ticker": ticker,
         "name": TICKER_TO_NAME.get(ticker, ticker),
-        "weight_pct": weight_pct,
-        "amount": amount,
+        "weight_pct": round(w * 100, 2),
+        "amount": round(capital * w, 2),
       })
 
   return {
@@ -382,6 +413,146 @@ def optimize_portfolio(body: OptimizeRequest):
       "base": round(capital * (1 + exp_return), 2),
       "bear": round(capital * (1 + exp_return - 1.5 * vol), 2),
     },
+  }
+
+
+@app.post("/api/optimize-portfolio")
+def optimize_portfolio(body: OptimizeRequest):
+  return _run_optimization(body.tickers, body.capital, body.risk_level, body.regime)
+
+
+def _whatif_recommendation(before: dict, after: dict, new_capital: float, base_capital: float,
+                            removed_tickers: list | None = None) -> str:
+  dr = after["expected_annual_return"] - before["expected_annual_return"]
+  dv = after["portfolio_volatility"]   - before["portfolio_volatility"]
+  ds = after["sharpe_ratio"]           - before["sharpe_ratio"]
+  dc = new_capital - base_capital
+
+  b_proj = before.get("projected_value_1y", base_capital)
+  a_proj = after.get("projected_value_1y",  new_capital)
+  extra_gain = round(a_proj - b_proj, 2)
+
+  metric_change = abs(dr) >= 0.1 or abs(dv) >= 0.1 or abs(ds) >= 0.01
+
+  # capital-only case: percentages unchanged, but projected ₹ value scales
+  if dc > 0 and not metric_change and not removed_tickers:
+    return (
+      f"Adding ₹{dc:,.0f} doesn't change your return or risk percentages — "
+      f"those depend on asset allocation, not amount. "
+      f"But it grows your projected 1-year value from ₹{b_proj:,.0f} to ₹{a_proj:,.0f}, "
+      f"an extra ₹{extra_gain:,.0f} in real money. "
+      f"The new capital is spread across the same optimised allocation."
+    )
+
+  # holding removed (with or without extra capital)
+  if removed_tickers:
+    removed_str = ", ".join(t.replace(".NS", "") for t in removed_tickers)
+    risk_dir = "lower risk" if dv < -0.05 else ("higher risk" if dv > 0.05 else "similar risk")
+    ret_dir  = "higher return" if dr > 0.1 else ("lower return" if dr < -0.1 else "similar return")
+    verdict = (
+      f"Removing {removed_str} re-optimised the portfolio to {ret_dir} "
+      f"({before['expected_annual_return']:.1f}% → {after['expected_annual_return']:.1f}%) "
+      f"and {risk_dir} "
+      f"(vol {before['portfolio_volatility']:.1f}% → {after['portfolio_volatility']:.1f}%). "
+      f"Sharpe {'improved' if ds > 0 else 'dropped'} "
+      f"from {before['sharpe_ratio']:.2f} to {after['sharpe_ratio']:.2f}."
+    )
+    if dc > 0:
+      verdict += (
+        f" The extra ₹{dc:,.0f} lifts projected 1-year value to ₹{a_proj:,.0f} "
+        f"(+₹{extra_gain:,.0f} vs. before)."
+      )
+    return verdict
+
+  # generic: some metric changed
+  parts = []
+  if abs(dr) >= 0.1:
+    parts.append(f"return {'rises' if dr > 0 else 'falls'} {abs(dr):.1f}%")
+  if abs(dv) >= 0.1:
+    parts.append(f"volatility {'rises' if dv > 0 else 'drops'} {abs(dv):.1f}%")
+  if abs(ds) >= 0.01:
+    parts.append(f"Sharpe {'improves' if ds > 0 else 'drops'} by {abs(ds):.2f}")
+  if not parts:
+    return "Minimal change — the optimizer converged to a very similar allocation."
+  summary = "Portfolio re-optimised: " + ", ".join(parts) + "."
+  if ds > 0 and dr > 0:
+    return summary + " Overall improvement in risk-adjusted terms."
+  if dv < 0:
+    return summary + " Risk reduced — good defensive move."
+  if ds < 0 and dv > 0:
+    return summary + " More risk for less efficiency — reconsider the change."
+  return summary
+
+
+@app.post("/api/what-if")
+def what_if(body: WhatIfRequest):
+  regime = (body.regime or "SIDEWAYS").upper()
+
+  # strip synthetic CASH entries — they are optimizer outputs, not inputs
+  SYNTHETIC = {"CASH", "CASH RESERVE"}
+  base_equity = [t for t in body.base_tickers if t.upper() not in SYNTHETIC]
+  remove_set  = set(body.remove_tickers)
+  modified    = list(dict.fromkeys(
+    [t for t in base_equity if t not in remove_set] + body.add_tickers
+  ))
+  new_capital = body.capital + (body.extra_capital or 0)
+
+  # cache keys
+  base_key     = f"whatif_base_{'_'.join(sorted(base_equity))}_{body.capital}_{body.risk_level}_{regime}"
+  modified_key = f"whatif_mod_{'_'.join(sorted(modified))}_{new_capital}_{body.risk_level}_{regime}"
+  now = datetime.utcnow()
+  TTL = 600
+
+  def _cached_or_run(key, tickers, capital):
+    cached = _cache.get(key)
+    if cached and (now - cached["ts"]).total_seconds() < TTL:
+      return cached["data"]
+    result = _run_optimization(tickers, capital, body.risk_level, regime)
+    _cache[key] = {"ts": now, "data": result}
+    return result
+
+  try:
+    before_result = _cached_or_run(base_key,     base_equity, body.capital)
+    after_result  = _cached_or_run(modified_key, modified,    new_capital)
+  except Exception as e:
+    log.error("What-if optimization failed: %s", e)
+    return {"error": str(e)}
+
+  def _projected(capital: float, annual_return_pct: float) -> float:
+    return round(capital * (1 + annual_return_pct / 100), 2)
+
+  before = {
+    "expected_annual_return": before_result["expected_annual_return"],
+    "portfolio_volatility":   before_result["portfolio_volatility"],
+    "sharpe_ratio":           before_result["sharpe_ratio"],
+    "capital":                body.capital,
+    "projected_value_1y":     _projected(body.capital, before_result["expected_annual_return"]),
+  }
+  after = {
+    "expected_annual_return": after_result["expected_annual_return"],
+    "portfolio_volatility":   after_result["portfolio_volatility"],
+    "sharpe_ratio":           after_result["sharpe_ratio"],
+    "capital":                new_capital,
+    "projected_value_1y":     _projected(new_capital, after_result["expected_annual_return"]),
+    "allocations":            after_result["allocations"],
+    "regime_note":            after_result.get("regime_note", ""),
+  }
+  extra_gain = round(after["projected_value_1y"] - before["projected_value_1y"], 2)
+  delta = {
+    "return_pct_change":     round(after["expected_annual_return"] - before["expected_annual_return"], 2),
+    "volatility_pct_change": round(after["portfolio_volatility"]   - before["portfolio_volatility"],   2),
+    "sharpe_change":         round(after["sharpe_ratio"]           - before["sharpe_ratio"],           3),
+    "capital_change":        round(new_capital - body.capital, 2),
+    "extra_projected_gain":  extra_gain,
+  }
+  return {
+    "before":         before,
+    "after":          after,
+    "delta":          delta,
+    "recommendation": _whatif_recommendation(
+      before, after, new_capital, body.capital,
+      removed_tickers=list(remove_set) if remove_set else None,
+    ),
   }
 
 
@@ -426,6 +597,7 @@ def live_prices(tickers: str = ""):
     entry = {
       "ticker": t,
       "current_price": round(float(price), 2) if price is not None else None,
+      "prev_close": round(float(prev_close), 2) if prev_close is not None else None,
       "change_pct_1d": round(float(change_pct), 2) if change_pct is not None else None,
       "last_updated": now.isoformat(),
     }
@@ -521,7 +693,7 @@ FALLBACK_INSIGHTS = [
 
 @app.post("/api/generate-insights")
 def generate_insights(body: GenerateInsightsRequest):
-  api_key = os.getenv("XAI_API_KEY", "")
+  api_key = os.getenv("GROQ_API_KEY", "")
 
   if api_key:
     portfolio_data = [p.model_dump() for p in body.portfolio]
@@ -535,10 +707,10 @@ def generate_insights(body: GenerateInsightsRequest):
     try:
       with httpx.Client(timeout=20) as client:
         resp = client.post(
-          "https://api.x.ai/v1/chat/completions",
+          "https://api.groq.com/openai/v1/chat/completions",
           headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
           json={
-            "model": "grok-2",
+            "model": "llama-3.3-70b-versatile",
             "max_tokens": 600,
             "messages": [
               {
@@ -565,6 +737,24 @@ def generate_insights(body: GenerateInsightsRequest):
     insights = FALLBACK_INSIGHTS
 
   return {"insights": insights, "generated_at": datetime.utcnow().isoformat()}
+
+
+@app.post("/api/devils-advocate")
+def devils_advocate_endpoint(body: DevilsAdvocateRequest):
+  regime = (body.regime or "SIDEWAYS").upper()
+  tickers_key = ",".join(sorted(a.get("ticker","") for a in body.allocations if a.get("ticker","") != "CASH"))
+  cache_key = f"devils_{tickers_key}_{regime}"
+  now = datetime.utcnow()
+
+  cached = _cache.get(cache_key)
+  if cached and (now - cached["ts"]).total_seconds() < 900:
+    return cached["data"]
+
+  metrics = analyze_portfolio_risks(body.allocations, SECTOR_TO_NAME, regime)
+  result  = devils_advocate_critique(body.allocations, regime, metrics)
+
+  _cache[cache_key] = {"ts": now, "data": result}
+  return result
 
 
 @app.post("/api/stress-test")
