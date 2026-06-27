@@ -1,215 +1,688 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { PlusCircle, Compass, ClipboardList, Wallet, LineChart, AlertCircle, RefreshCw } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts'
+import {
+  Activity, TrendingUp, TrendingDown, Compass, ClipboardList,
+  Wallet, BarChart3, AlertCircle, X, ZapOff, Zap, Clock,
+  ChevronRight, RefreshCw, ArrowUpRight, ArrowDownRight,
+} from 'lucide-react'
 import api from '../lib/api'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Badge from '../components/Badge'
 import LoadingSpinner from '../components/LoadingSpinner'
+import Modal from '../components/Modal'
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const LIVE_TICKER_SYMBOLS = [
+  'RELIANCE.NS','TCS.NS','HDFCBANK.NS','ICICIBANK.NS','INFY.NS',
+  'SBIN.NS','BHARTIARTL.NS','BAJFINANCE.NS','KOTAKBANK.NS','LT.NS',
+  'HCLTECH.NS','AXISBANK.NS','MARUTI.NS','SUNPHARMA.NS','TITAN.NS',
+  'WIPRO.NS','ONGC.NS','NTPC.NS','TATAMOTORS.NS','TATASTEEL.NS',
+]
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function fmtINR(n) {
+  if (n == null) return '—'
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency', currency: 'INR', maximumFractionDigits: 2,
+  }).format(n)
+}
+
+function fmtPct(n, decimals = 2) {
+  if (n == null) return '—'
+  const sign = n >= 0 ? '+' : ''
+  return `${sign}${n.toFixed(decimals)}%`
+}
+
+function tickerLabel(t) {
+  return t.replace('.NS', '').replace('.BO', '').replace('&', '')
+}
+
+// colour on a red→white→green gradient for heatmap cells
+function heatColor(pct) {
+  if (pct == null) return '#1f2937'
+  const clamped = Math.max(-5, Math.min(5, pct))
+  if (clamped >= 0) {
+    const t = clamped / 5
+    const g = Math.round(80 + t * 100)
+    return `rgba(16,${g},${Math.round(80 * (1 - t))},${0.25 + t * 0.55})`
+  } else {
+    const t = Math.abs(clamped) / 5
+    const r = Math.round(120 + t * 135)
+    return `rgba(${r},30,30,${0.25 + t * 0.55})`
+  }
+}
+
+function isMarketHour() {
+  const now = new Date()
+  const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+  const h = ist.getHours(), m = ist.getMinutes()
+  const day = ist.getDay()
+  if (day === 0 || day === 6) return false
+  const mins = h * 60 + m
+  return mins >= 9 * 60 + 15 && mins <= 15 * 60 + 30
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function MarketStatusBar({ status }) {
+  const [clockIST, setClockIST] = useState('')
+
+  useEffect(() => {
+    const tick = () => {
+      setClockIST(
+        new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })
+      )
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  if (!status) {
+    return (
+      <div className="w-full bg-[#111827] border border-slate-800 rounded-xl px-5 py-3 flex items-center gap-3 text-slate-500 text-sm">
+        <Activity className="h-4 w-4 animate-pulse" />
+        Loading market status…
+      </div>
+    )
+  }
+
+  const open = status.is_open
+  const nextOpen = status.next_open
+    ? new Date(status.next_open).toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata', hour12: true,
+        weekday: 'short', hour: '2-digit', minute: '2-digit',
+      })
+    : null
+
+  return (
+    <div className={`w-full rounded-xl border px-5 py-3 flex flex-wrap items-center gap-4 text-sm font-medium ${
+      open
+        ? 'bg-emerald-950/20 border-emerald-500/20'
+        : 'bg-slate-900/40 border-slate-800'
+    }`}>
+      {/* Status Badge */}
+      <div className="flex items-center gap-2">
+        {open ? (
+          <>
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400" />
+            </span>
+            <span className="text-emerald-400 font-bold tracking-wider uppercase text-xs">NSE OPEN</span>
+          </>
+        ) : (
+          <>
+            <ZapOff className="h-4 w-4 text-slate-500" />
+            <span className="text-slate-400 font-bold tracking-wider uppercase text-xs">NSE CLOSED</span>
+          </>
+        )}
+      </div>
+
+      <div className="h-4 w-px bg-slate-700" />
+
+      {/* IST Clock */}
+      <div className="flex items-center gap-1.5 text-slate-300">
+        <Clock className="h-3.5 w-3.5 text-slate-500" />
+        <span className="font-mono">{clockIST} IST</span>
+      </div>
+
+      <div className="h-4 w-px bg-slate-700" />
+
+      {/* Session label */}
+      <span className="text-slate-400 capitalize">
+        Session: <span className="text-white font-semibold">{status.session}</span>
+      </span>
+
+      {!open && nextOpen && (
+        <>
+          <div className="h-4 w-px bg-slate-700" />
+          <span className="text-slate-400">
+            Next open: <span className="text-[#00D4FF] font-semibold">{nextOpen}</span>
+          </span>
+        </>
+      )}
+
+      <div className="ml-auto">
+        <Badge variant={open ? 'success' : 'gray'}>
+          {open ? 'LIVE' : 'Offline'}
+        </Badge>
+      </div>
+    </div>
+  )
+}
+
+function MoverCard({ mover }) {
+  const up = mover.direction === 'up'
+  return (
+    <div className={`flex-shrink-0 w-44 rounded-xl border p-4 space-y-2 transition-all hover:scale-[1.02] ${
+      up
+        ? 'border-emerald-500/20 bg-emerald-950/15'
+        : 'border-red-500/20 bg-red-950/15'
+    }`}>
+      <div className="flex items-center justify-between">
+        <span className="font-mono font-bold text-white text-sm">{tickerLabel(mover.ticker)}</span>
+        {up
+          ? <ArrowUpRight className="h-4 w-4 text-emerald-400" />
+          : <ArrowDownRight className="h-4 w-4 text-red-400" />
+        }
+      </div>
+      <div className="font-mono font-black text-lg text-white">
+        {fmtINR(mover.last_price)}
+      </div>
+      <div className={`text-sm font-bold font-mono ${up ? 'text-emerald-400' : 'text-red-400'}`}>
+        {fmtPct(mover.change_pct)}
+      </div>
+      {mover.volume_spike != null && (
+        <div className="flex items-center gap-1 text-[10px] text-slate-400">
+          <Zap className="h-3 w-3 text-amber-400" />
+          <span>Vol spike: <span className="text-amber-400 font-bold">{mover.volume_spike}×</span></span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function HeatmapCell({ mover, onClick }) {
+  const pct = mover?.change_pct ?? null
+  const bg = heatColor(pct)
+  const up = pct != null && pct >= 0
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(mover)}
+      title={`${mover.ticker}: ${fmtPct(pct)}`}
+      className="rounded-lg p-2 text-center cursor-pointer transition-all hover:ring-1 hover:ring-white/20 hover:scale-105 active:scale-95"
+      style={{ backgroundColor: bg }}
+    >
+      <div className="text-[10px] font-bold text-white/90 leading-tight truncate">
+        {tickerLabel(mover.ticker)}
+      </div>
+      <div className={`text-[10px] font-mono font-black mt-0.5 ${up ? 'text-emerald-300' : 'text-red-300'}`}>
+        {fmtPct(pct, 1)}
+      </div>
+    </button>
+  )
+}
+
+function HistoryModal({ ticker, onClose }) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['history', ticker],
+    queryFn: async () => {
+      const { data } = await api.get(`/api/v1/market/history/${ticker}?period=1y`)
+      return data.rows || []
+    },
+    enabled: !!ticker,
+  })
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-[#111827] border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-slate-800">
+          <div>
+            <h3 className="text-lg font-bold text-white font-mono">{tickerLabel(ticker)}</h3>
+            <p className="text-xs text-slate-400">1-Year Price History</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Chart */}
+        <div className="p-5">
+          {isLoading && <LoadingSpinner message={`Loading ${tickerLabel(ticker)} history…`} />}
+          {isError && (
+            <div className="text-center py-8 text-red-400 text-sm">
+              <AlertCircle className="mx-auto h-8 w-8 mb-2" />
+              Failed to load price history.
+            </div>
+          )}
+          {data && data.length > 0 && (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data} margin={{ left: 10, right: 10 }}>
+                  <defs>
+                    <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00D4FF" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#00D4FF" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#6b7280"
+                    fontSize={10}
+                    tickFormatter={(d) => d?.slice(5)}  // show MM-DD
+                    interval={Math.floor(data.length / 6)}
+                  />
+                  <YAxis
+                    stroke="#6b7280"
+                    fontSize={10}
+                    width={68}
+                    tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#0A0E1A', borderColor: '#374151', borderRadius: '8px' }}
+                    itemStyle={{ color: '#00D4FF' }}
+                    labelStyle={{ color: '#9ca3af', fontSize: 11 }}
+                    formatter={(v) => [fmtINR(v), 'Close']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="close"
+                    stroke="#00D4FF"
+                    strokeWidth={2}
+                    fill="url(#histGrad)"
+                    dot={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function LiveTickerBand({ symbols }) {
+  const { data } = useQuery({
+    queryKey: ['live-ticker-band'],
+    queryFn: async () => {
+      const results = await Promise.allSettled(
+        symbols.map((s) => api.get(`/api/v1/market/price/${s}`).then((r) => r.data))
+      )
+      return results
+        .filter((r) => r.status === 'fulfilled')
+        .map((r) => r.value)
+    },
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+  })
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-10 bg-slate-900/60 border border-slate-800 rounded-xl flex items-center px-4 text-xs text-slate-500 italic">
+        Loading live ticker…
+      </div>
+    )
+  }
+
+  // duplicate for seamless loop
+  const items = [...data, ...data]
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950/60 h-10">
+      <div
+        className="flex items-center h-full gap-8 px-4"
+        style={{
+          animation: 'ticker-scroll 60s linear infinite',
+          width: 'max-content',
+        }}
+      >
+        {items.map((item, idx) => {
+          const up = item.change_pct >= 0
+          return (
+            <span key={`${item.ticker}-${idx}`} className="flex items-center gap-2 text-xs flex-shrink-0">
+              <span className="font-mono font-bold text-white">{tickerLabel(item.ticker)}</span>
+              <span className="font-mono text-slate-300">{fmtINR(item.price)}</span>
+              <span className={`font-mono font-bold ${up ? 'text-emerald-400' : 'text-red-400'}`}>
+                {fmtPct(item.change_pct)}
+              </span>
+              <span className="text-slate-700">│</span>
+            </span>
+          )
+        })}
+      </div>
+      {/* Fades */}
+      <div className="absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-slate-950/60 to-transparent pointer-events-none" />
+      <div className="absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-slate-950/60 to-transparent pointer-events-none" />
+    </div>
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const [portfolios, setPortfolios] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [selectedTicker, setSelectedTicker] = useState(null)
+  const moversScrollRef = useRef(null)
 
-  async function fetchPortfolios() {
-    setError('')
-    try {
-      const { data } = await api.get('/api/v1/portfolios')
-      setPortfolios(data)
-    } catch (err) {
-      setError('Failed to fetch portfolios. Please reload.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const marketOpen = isMarketHour()
 
-  useEffect(() => {
-    fetchPortfolios()
-  }, [])
+  // ── Queries ──────────────────────────────────────────────────────────────
 
-  const totalCapital = portfolios.reduce((acc, p) => acc + (p.amount || 0), 0)
-  const readyPortfolios = portfolios.filter(p => p.status === 'ready')
+  const { data: marketStatus, refetch: refetchStatus } = useQuery({
+    queryKey: ['market-status'],
+    queryFn: async () => (await api.get('/api/v1/market/status')).data,
+    refetchInterval: marketOpen ? 30_000 : 60_000,
+    staleTime: 20_000,
+  })
+
+  const { data: topMovers = [], isLoading: moversLoading } = useQuery({
+    queryKey: ['top-movers'],
+    queryFn: async () => (await api.get('/api/v1/market/top-movers?n=10')).data,
+    refetchInterval: marketOpen ? 60_000 : false,
+    staleTime: 55_000,
+  })
+
+  const { data: heatmapData = [], isLoading: heatLoading } = useQuery({
+    queryKey: ['nifty-heatmap'],
+    queryFn: async () => (await api.get('/api/v1/market/top-movers?n=50')).data,
+    refetchInterval: marketOpen ? 60_000 : false,
+    staleTime: 55_000,
+  })
+
+  const {
+    data: portfolios = [],
+    isLoading: portfoliosLoading,
+    isError: portfoliosError,
+    refetch: refetchPortfolios,
+  } = useQuery({
+    queryKey: ['portfolios'],
+    queryFn: async () => (await api.get('/api/v1/portfolios/')).data,
+    refetchInterval: 60_000,
+    staleTime: 55_000,
+  })
+
+  // ── Derived stats ─────────────────────────────────────────────────────────
+  const totalCapital = portfolios.reduce((s, p) => s + (p.amount || 0), 0)
+  const readyPortfolios = portfolios.filter((p) => p.status === 'ready')
   const avgReturn = readyPortfolios.length
-    ? (readyPortfolios.reduce((acc, p) => acc + (p.constraints?.metrics?.expected_return || p.results?.expected_return || 0), 0) / readyPortfolios.length) * 100
+    ? readyPortfolios.reduce((s, p) => {
+        const r = p.results?.metrics?.expected_return
+          ?? p.results?.expected_return
+          ?? 0
+        return s + r
+      }, 0) / readyPortfolios.length
     : 0
 
-  if (loading) {
-    return <LoadingSpinner message="Retrieving your portfolios..." />
-  }
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-8 py-6">
-      {/* Header section */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Investment Dashboard</h1>
-          <p className="text-sm text-slate-400">
-            Monitor and orchestrate your machine-learning optimized portfolios.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link to="/analyze">
-            <Button variant="primary">
-              <Compass className="h-4 w-4 mr-1.5" />
-              Analyze Goal
-            </Button>
-          </Link>
-          <Link to="/questionnaire">
-            <Button variant="secondary">
-              <ClipboardList className="h-4 w-4 mr-1.5" />
-              Questionnaire
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-        <Card className="flex items-center gap-4 bg-slate-900/40">
-          <div className="p-3 rounded-lg bg-[#00D4FF]/10 text-[#00D4FF]">
-            <Wallet className="h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Invested Capital</p>
-            <h3 className="text-xl font-bold text-white mt-0.5">₹{totalCapital.toLocaleString('en-IN')}</h3>
-          </div>
-        </Card>
-        <Card className="flex items-center gap-4 bg-slate-900/40">
-          <div className="p-3 rounded-lg bg-emerald-500/10 text-emerald-400">
-            <LineChart className="h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Avg Expected Return</p>
-            <h3 className="text-xl font-bold text-white mt-0.5">{avgReturn.toFixed(2)}% p.a.</h3>
-          </div>
-        </Card>
-        <Card className="flex items-center gap-4 bg-slate-900/40">
-          <div className="p-3 rounded-lg bg-purple-500/10 text-purple-400">
-            <PlusCircle className="h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Portfolios</p>
-            <h3 className="text-xl font-bold text-white mt-0.5">{portfolios.length}</h3>
-          </div>
-        </Card>
-      </div>
-
-      {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-950/30 border border-red-500/20 text-red-400 rounded-lg text-sm">
-          <AlertCircle className="h-4 w-4" />
-          <span>{error}</span>
-          <button type="button" onClick={fetchPortfolios} className="ml-auto flex items-center gap-1 text-[#00D4FF] hover:underline cursor-pointer">
-            <RefreshCw className="h-3 w-3" /> Retry
-          </button>
-        </div>
+    <>
+      {/* Price History Modal */}
+      {selectedTicker && (
+        <HistoryModal ticker={selectedTicker} onClose={() => setSelectedTicker(null)} />
       )}
 
-      {/* Portfolio Grid */}
-      <div>
-        <h2 className="text-xl font-bold text-white mb-4">Your Portfolios</h2>
-        {portfolios.length === 0 ? (
-          <Card className="text-center py-12 bg-slate-900/20 border-dashed border-slate-800">
-            <div className="max-w-md mx-auto space-y-4">
-              <p className="text-slate-400 text-sm">
-                You haven't generated any optimized portfolios yet. Get started by entering an investment goal or completing the risk questionnaire.
-              </p>
-              <div className="flex justify-center gap-3">
-                <Link to="/analyze">
-                  <Button variant="primary">Analyze Investment Goal</Button>
-                </Link>
-                <Link to="/questionnaire">
-                  <Button variant="ghost">Risk Questionnaire</Button>
-                </Link>
-              </div>
+      <style>{`
+        @keyframes ticker-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
+
+      <div className="space-y-6 py-6">
+
+        {/* ── 1. Market Status Bar ── */}
+        <MarketStatusBar status={marketStatus} />
+
+        {/* ── Summary metrics row ── */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Card className="flex items-center gap-4 bg-slate-900/30 border-slate-800/60">
+            <div className="p-3 rounded-lg bg-[#00D4FF]/10 text-[#00D4FF]">
+              <Wallet className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Invested</p>
+              <p className="text-xl font-black text-white font-mono">{fmtINR(totalCapital)}</p>
             </div>
           </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {portfolios.map((portfolio) => {
-              const metrics = portfolio.constraints?.metrics || portfolio.results || {}
-              const isReady = portfolio.status === 'ready'
-              const isProcessing = portfolio.status === 'processing'
-              const isPending = portfolio.status === 'pending'
+          <Card className="flex items-center gap-4 bg-slate-900/30 border-slate-800/60">
+            <div className="p-3 rounded-lg bg-emerald-500/10 text-emerald-400">
+              <TrendingUp className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Avg Expected Return</p>
+              <p className="text-xl font-black text-white font-mono">{(avgReturn * 100).toFixed(2)}% p.a.</p>
+            </div>
+          </Card>
+          <Card className="flex items-center gap-4 bg-slate-900/30 border-slate-800/60">
+            <div className="p-3 rounded-lg bg-purple-500/10 text-purple-400">
+              <BarChart3 className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Active Portfolios</p>
+              <p className="text-xl font-black text-white font-mono">{portfolios.length}</p>
+            </div>
+          </Card>
+        </div>
 
-              return (
-                <Card
-                  key={portfolio.id}
-                  className="hover:border-slate-700 transition-all flex flex-col justify-between cursor-pointer"
-                  onClick={() => navigate(`/portfolio/${portfolio.id}`)}
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-bold text-white text-lg truncate max-w-[70%]">
-                        {portfolio.name}
-                      </h3>
-                      <Badge
-                        variant={isReady ? 'success' : isProcessing ? 'purple' : 'warning'}
-                      >
-                        {portfolio.status}
-                      </Badge>
-                    </div>
+        {/* ── 2. Top Movers ── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-[#00D4FF]" />
+              Top Movers — Nifty 50
+            </h2>
+            {!marketOpen && (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-950/30 border border-amber-500/20 px-2 py-1 rounded-full flex items-center gap-1">
+                <ZapOff className="h-3 w-3" />
+                Last Session Data
+              </span>
+            )}
+          </div>
 
-                    <p className="text-xs text-slate-400 line-clamp-2 mt-2 min-h-[2rem]">
-                      {portfolio.goal_text || 'No goal description.'}
-                    </p>
+          {moversLoading ? (
+            <LoadingSpinner size="sm" message="Fetching movers…" />
+          ) : (
+            <div
+              ref={moversScrollRef}
+              className="flex gap-4 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent"
+            >
+              {topMovers.map((m) => (
+                <MoverCard key={m.ticker} mover={m} />
+              ))}
+              {topMovers.length === 0 && (
+                <p className="text-slate-500 text-sm italic py-6">No mover data available.</p>
+              )}
+            </div>
+          )}
+        </section>
 
-                    <div className="mt-4 grid grid-cols-2 gap-4 border-t border-slate-800 pt-4">
-                      <div>
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Amount</span>
-                        <p className="font-semibold text-white text-sm">₹{portfolio.amount?.toLocaleString('en-IN')}</p>
-                      </div>
-                      <div>
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Risk Profile</span>
-                        <p className="font-semibold text-white text-sm capitalize">{portfolio.risk_level}</p>
-                      </div>
-                    </div>
+        {/* ── 3. Nifty 50 Heatmap ── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Activity className="h-5 w-5 text-[#7C3AED]" />
+              Nifty 50 Heatmap
+            </h2>
+            <span className="text-[10px] text-slate-500 italic">Click any cell to view history chart</span>
+          </div>
+
+          {heatLoading ? (
+            <LoadingSpinner size="sm" message="Rendering heatmap…" />
+          ) : (
+            <Card className="p-4 border-slate-800/60">
+              <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-1.5">
+                {heatmapData.map((mover) => (
+                  <HeatmapCell
+                    key={mover.ticker}
+                    mover={mover}
+                    onClick={(m) => setSelectedTicker(m.ticker)}
+                  />
+                ))}
+                {heatmapData.length === 0 && (
+                  <div className="col-span-10 text-center text-slate-500 text-sm italic py-8">
+                    Heatmap data unavailable.
                   </div>
+                )}
+              </div>
 
-                  <div className="mt-6">
-                    {isReady ? (
-                      <div className="grid grid-cols-3 gap-2 bg-slate-900/50 p-2.5 rounded-lg text-center text-xs">
+              {/* Legend */}
+              <div className="mt-4 flex items-center gap-3 text-[10px] text-slate-400">
+                <span>Negative</span>
+                <div className="h-2 flex-1 rounded-full bg-gradient-to-r from-red-600/80 via-slate-700 to-emerald-600/80" />
+                <span>Positive</span>
+              </div>
+            </Card>
+          )}
+        </section>
+
+        {/* ── 4. Quick Actions ── */}
+        <section>
+          <h2 className="text-xl font-bold text-white mb-3">Quick Actions</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Link to="/analyze" className="group">
+              <div className="relative overflow-hidden rounded-xl border border-[#00D4FF]/20 bg-gradient-to-br from-[#00D4FF]/10 to-transparent p-6 hover:border-[#00D4FF]/50 transition-all hover:shadow-[0_0_24px_rgba(0,212,255,0.12)]">
+                <Compass className="h-8 w-8 text-[#00D4FF] mb-3" />
+                <h3 className="text-lg font-bold text-white">Analyze My Portfolio Goal</h3>
+                <p className="text-sm text-slate-400 mt-1">Describe your goals in plain English. Our LLM extracts constraints and an XGBoost optimizer generates the ideal allocation.</p>
+                <div className="mt-4 flex items-center gap-1 text-[#00D4FF] text-sm font-semibold">
+                  Get Started <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </Link>
+            <Link to="/questionnaire" className="group">
+              <div className="relative overflow-hidden rounded-xl border border-[#7C3AED]/20 bg-gradient-to-br from-[#7C3AED]/10 to-transparent p-6 hover:border-[#7C3AED]/50 transition-all hover:shadow-[0_0_24px_rgba(124,58,237,0.12)]">
+                <ClipboardList className="h-8 w-8 text-[#7C3AED] mb-3" />
+                <h3 className="text-lg font-bold text-white">Use Risk Questionnaire</h3>
+                <p className="text-sm text-slate-400 mt-1">Answer 9 guided questions about your goals, appetite, and timeline. Our risk profiler builds your optimal strategy.</p>
+                <div className="mt-4 flex items-center gap-1 text-[#7C3AED] text-sm font-semibold">
+                  Start Quiz <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </Link>
+          </div>
+        </section>
+
+        {/* ── 5. My Portfolios ── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-bold text-white">My Portfolios</h2>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => refetchPortfolios()}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                title="Refresh"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
+              <Link to="/analyze">
+                <Button variant="primary" className="py-1.5 text-xs">
+                  + New Analysis
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {portfoliosLoading ? (
+            <LoadingSpinner size="sm" message="Loading portfolios…" />
+          ) : portfoliosError ? (
+            <div className="flex items-center gap-2 p-4 bg-red-950/30 border border-red-500/20 text-red-400 rounded-lg text-sm">
+              <AlertCircle className="h-4 w-4" />
+              Failed to load portfolios. Please refresh.
+            </div>
+          ) : portfolios.length === 0 ? (
+            <Card className="text-center py-12 border-dashed border-slate-800 bg-slate-900/20">
+              <p className="text-slate-400 text-sm mb-4">No portfolios yet. Create your first optimized strategy.</p>
+              <div className="flex justify-center gap-3">
+                <Link to="/analyze"><Button variant="primary">Analyze Goal</Button></Link>
+                <Link to="/questionnaire"><Button variant="ghost">Questionnaire</Button></Link>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {portfolios.map((p) => {
+                const metrics = p.results?.metrics || p.results || {}
+                const isReady = p.status === 'ready'
+                const createdAt = new Date(p.created_at).toLocaleDateString('en-IN', {
+                  day: 'numeric', month: 'short', year: 'numeric',
+                })
+                return (
+                  <Card
+                    key={p.id}
+                    className="hover:border-slate-700 transition-all cursor-pointer flex flex-col justify-between"
+                    onClick={() => navigate(`/portfolio/${p.id}`)}
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <h3 className="font-bold text-white text-base leading-tight max-w-[70%] truncate">{p.name}</h3>
+                        <Badge variant={isReady ? 'success' : p.status === 'processing' ? 'purple' : 'warning'}>
+                          {p.status}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-slate-400 line-clamp-2 min-h-[2rem]">
+                        {p.goal_text || 'No goal text.'}
+                      </p>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-800 pt-3">
                         <div>
-                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Return</span>
+                          <span className="text-[10px] uppercase font-black tracking-wider text-slate-500 block">Amount</span>
+                          <span className="text-sm font-bold text-white font-mono">{fmtINR(p.amount)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-black tracking-wider text-slate-500 block">Created</span>
+                          <span className="text-sm font-medium text-slate-300">{createdAt}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {isReady && (
+                      <div className="grid grid-cols-3 gap-2 bg-slate-900/50 mt-4 p-2.5 rounded-lg text-center text-xs">
+                        <div>
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Return</span>
                           <span className="font-bold text-emerald-400 font-mono">
-                            {metrics.expected_return ? `${(metrics.expected_return * 100).toFixed(1)}%` : '—'}
+                            {metrics.expected_return != null ? fmtPct(metrics.expected_return * 100, 1) : '—'}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Volatility</span>
-                          <span className="font-bold text-slate-300 font-mono">
-                            {metrics.volatility ? `${(metrics.volatility * 100).toFixed(1)}%` : '—'}
-                          </span>
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Risk</span>
+                          <span className="font-bold text-slate-300 capitalize text-[11px]">{p.risk_level}</span>
                         </div>
                         <div>
-                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Sharpe</span>
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Sharpe</span>
                           <span className="font-bold text-[#00D4FF] font-mono">
-                            {metrics.sharpe ? metrics.sharpe.toFixed(2) : '—'}
+                            {metrics.sharpe != null ? metrics.sharpe.toFixed(2) : '—'}
                           </span>
                         </div>
                       </div>
-                    ) : (
-                      <div className="space-y-1.5">
+                    )}
+
+                    {!isReady && p.progress > 0 && (
+                      <div className="mt-4 space-y-1.5">
                         <div className="flex justify-between items-center text-xs text-slate-400">
                           <span>Progress</span>
-                          <span className="font-mono font-bold text-[#00D4FF]">{portfolio.progress}%</span>
+                          <span className="font-mono font-bold text-[#00D4FF]">{p.progress}%</span>
                         </div>
                         <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-[#00D4FF] to-[#7C3AED] transition-all duration-300"
-                            style={{ width: `${portfolio.progress}%` }}
+                            className="h-full bg-gradient-to-r from-[#00D4FF] to-[#7C3AED] transition-all"
+                            style={{ width: `${p.progress}%` }}
                           />
                         </div>
                       </div>
                     )}
-                  </div>
-                </Card>
-              )
-            })}
-          </div>
-        )}
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ── 6. Live Price Ticker Band ── */}
+        <section>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-2">
+            <Activity className="h-3.5 w-3.5" />
+            Live Market Prices
+          </h2>
+          <LiveTickerBand symbols={LIVE_TICKER_SYMBOLS} />
+        </section>
+
       </div>
-    </div>
+    </>
   )
 }

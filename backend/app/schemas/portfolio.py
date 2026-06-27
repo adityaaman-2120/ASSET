@@ -42,6 +42,8 @@ class PortfolioOut(BaseModel):
     horizon_years: int | None = None
     constraints: dict[str, Any] | None = None
     status: str
+    progress: int = 0
+    results: dict[str, Any] | None = None
     created_at: datetime
     holdings: list[HoldingOut] = []
 
@@ -49,6 +51,7 @@ class PortfolioOut(BaseModel):
     @classmethod
     def _enum_to_value(cls, v):
         return getattr(v, "value", v)
+
 
 
 class GenerateResponse(BaseModel):
