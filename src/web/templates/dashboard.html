@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASSETS Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-card: #1a1f2e;
+  --bg-card-hover: #1f2638;
+  --border: #2a3142;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-dim: #64748b;
+  --accent-blue: #3b82f6;
+  --accent-cyan: #06b6d4;
+  --accent-green: #22c55e;
+  --accent-red: #ef4444;
+  --accent-yellow: #eab308;
+  --accent-magenta: #a855f7;
+  --accent-orange: #f97316;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+}
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding: 16px;
+}
+.header {
+  background: linear-gradient(135deg, var(--bg-card), #1e3a5f);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header-brand h1 {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.header-badges { display: flex; gap: 8px; align-items: center; }
+.badge {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.badge-paper { background: #065f46; color: #6ee7b7; }
+.badge-live { background: #7f1d1d; color: #fca5a5; }
+.badge-simulated { background: #854d0e; color: #fde68a; }
+.badge-live-data { background: #155e75; color: #67e8f9; }
+.badge-yfinance { background: #1e3a5f; color: #93c5fd; }
+.header-time { font-size: 12px; color: var(--text-secondary); }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: var(--text-dim); }
+.card-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-title .icon { font-size: 14px; }
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.stat-label { color: var(--text-secondary); }
+.stat-value { font-weight: 600; }
+.stat-value.green { color: var(--accent-green); }
+.stat-value.red { color: var(--accent-red); }
+.stat-value.cyan { color: var(--accent-cyan); }
+.stat-value.yellow { color: var(--accent-yellow); }
+.stat-value.magenta { color: var(--accent-magenta); }
+.stat-value.orange { color: var(--accent-orange); }
+.stat-value.blue { color: var(--accent-blue); }
+.bar-wrapper {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-primary);
+  border-radius: 3px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+.card-full { grid-column: 1 / -1; }
+.card-wide { grid-column: span 2; }
+
+/* Market Table */
+.market-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.market-table th {
+  text-align: left;
+  padding: 6px 8px;
+  color: var(--text-dim);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+.market-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(42, 49, 66, 0.5);
+}
+.market-table tr:hover { background: var(--bg-card-hover); }
+.market-table td:last-child, .market-table th:last-child { text-align: right; }
+.symbol-name { font-weight: 600; }
+.trend-up { color: var(--accent-green); }
+.trend-down { color: var(--accent-red); }
+
+/* Positions Table */
+.positions-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.positions-table th {
+  text-align: left;
+  padding: 6px 8px;
+  color: var(--text-dim);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+.positions-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(42, 49, 66, 0.5);
+}
+.positions-table td:last-child, .positions-table th:last-child { text-align: right; }
+
+/* Activity Log */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+.activity-item {
+  display: flex;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+.activity-item:hover { background: var(--bg-card-hover); }
+.activity-time { color: var(--text-dim); white-space: nowrap; }
+.activity-msg { color: var(--text-secondary); }
+.activity-info .activity-msg { color: var(--text-secondary); }
+.activity-success .activity-msg { color: var(--accent-green); }
+.activity-warning .activity-msg { color: var(--accent-yellow); }
+.activity-error .activity-msg { color: var(--accent-red); }
+.activity-trade .activity-msg { color: var(--accent-cyan); }
+
+/* Regime display */
+.regime-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.regime-trending_up { background: #064e3b; color: #6ee7b7; }
+.regime-trending_down { background: #7f1d1d; color: #fca5a5; }
+.regime-ranging { background: #713f12; color: #fde68a; }
+.regime-volatile { background: #4c1d95; color: #d8b4fe; }
+.regime-unknown { background: #1e293b; color: var(--text-dim); }
+
+/* Strategy tags */
+.strategy-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.strategy-tag {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: var(--bg-primary);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+/* Signal card */
+.signal-type {
+  font-size: 16px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 6px;
+}
+.signal-BUY { background: #064e3b; color: #6ee7b7; }
+.signal-SELL { background: #7f1d1d; color: #fca5a5; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+  .card-wide { grid-column: span 2; }
+}
+@media (max-width: 640px) {
+  .grid { grid-template-columns: 1fr; }
+  .card-wide { grid-column: span 1; }
+  .header { flex-direction: column; gap: 8px; text-align: center; }
+  body { padding: 8px; }
+}
+
+/* Connection indicator */
+.connection-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.connected { background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); }
+.disconnected { background: var(--accent-red); box-shadow: 0 0 6px var(--accent-red); }
+.connecting { background: var(--accent-yellow); box-shadow: 0 0 6px var(--accent-yellow); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.empty-state {
+  color: var(--text-dim);
+  font-style: italic;
+  font-size: 13px;
+  padding: 8px 0;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <span style="font-size:24px">🛡️</span>
+    <h1>ASSETS</h1>
+    <span class="header-badges">
+      <span id="modeBadge" class="badge badge-paper">PAPER</span>
+      <span id="dataBadge" class="badge badge-simulated">SIMULATED</span>
+    </span>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <span id="connectionStatus" style="display:flex;align-items:center;font-size:12px">
+      <span class="connection-dot connecting" id="connDot"></span>
+      <span id="connText" style="color:var(--text-secondary)">Connecting...</span>
+    </span>
+    <span id="sessionTime" class="header-time">Session: 00:00:00</span>
+  </div>
+</div>
+
+<div class="grid">
+  <!-- Account -->
+  <div class="card">
+    <div class="card-title"><span class="icon">💰</span> Account</div>
+    <div class="stat-row"><span class="stat-label">Balance</span><span class="stat-value" id="balance">Rs. 1,000,000.00</span></div>
+    <div class="stat-row"><span class="stat-label">P&amp;L</span><span class="stat-value" id="pnl">Rs. 0.00 (0.00%)</span></div>
+    <div class="stat-row"><span class="stat-label">Realized</span><span class="stat-value" id="realizedPnl">Rs. 0.00</span></div>
+    <div class="stat-row"><span class="stat-label">Unrealized</span><span class="stat-value" id="unrealizedPnl">Rs. 0.00</span></div>
+    <div class="stat-row"><span class="stat-label">Best Trade</span><span class="stat-value green" id="bestTrade">Rs. 0.00</span></div>
+    <div class="stat-row"><span class="stat-label">Worst Trade</span><span class="stat-value red" id="worstTrade">Rs. 0.00</span></div>
+  </div>
+
+  <!-- Trades -->
+  <div class="card">
+    <div class="card-title"><span class="icon">📊</span> Trades</div>
+    <div class="stat-row"><span class="stat-label">Total</span><span class="stat-value" id="totalTrades">0</span></div>
+    <div class="stat-row"><span class="stat-label">Winners</span><span class="stat-value green" id="winningTrades">0</span></div>
+    <div class="stat-row"><span class="stat-label">Losers</span><span class="stat-value red" id="losingTrades">0</span></div>
+    <div class="stat-row"><span class="stat-label">Win Rate</span><span class="stat-value" id="winRate">0.0%</span></div>
+    <div class="bar-wrapper"><div class="bar-fill" id="winRateBar" style="width:0%;background:var(--accent-green)"></div></div>
+  </div>
+
+  <!-- Market Regime -->
+  <div class="card">
+    <div class="card-title"><span class="icon">📈</span> Market Regime</div>
+    <div style="margin-bottom:8px"><span class="regime-badge regime-unknown" id="regimeBadge">⚪ UNKNOWN</span></div>
+    <div class="stat-row"><span class="stat-label">Confidence</span><span class="stat-value yellow" id="regimeConfidence">0%</span></div>
+    <div class="bar-wrapper"><div class="bar-fill" id="confidenceBar" style="width:0%;background:var(--accent-yellow)"></div></div>
+    <div id="strategyTags" class="strategy-tags"></div>
+  </div>
+
+  <!-- Agent Activity -->
+  <div class="card">
+    <div class="card-title"><span class="icon">🤖</span> Agent Activity</div>
+    <div class="stat-row"><span class="stat-label">Cycles Run</span><span class="stat-value" id="cyclesRun">0</span></div>
+    <div class="stat-row"><span class="stat-label">Signals Gen</span><span class="stat-value" id="signalsGenerated">0</span></div>
+    <div class="stat-row"><span class="stat-label">Validated</span><span class="stat-value green" id="signalsValidated">0</span></div>
+    <div class="stat-row"><span class="stat-label">Rejected</span><span class="stat-value red" id="signalsRejected">0</span></div>
+    <div class="stat-row"><span class="stat-label">Risk Blocked</span><span class="stat-value yellow" id="tradesRiskRejected">0</span></div>
+    <div class="stat-row"><span class="stat-label">Approved</span><span class="stat-value cyan" id="tradesApproved">0</span></div>
+  </div>
+
+  <!-- AI Decision -->
+  <div class="card card-wide">
+    <div class="card-title"><span class="icon">🧠</span> AI Decision</div>
+    <div id="signalDisplay">
+      <span style="color:var(--text-dim);font-style:italic;font-size:13px">No active signal</span>
+    </div>
+    <div id="decisionReason" style="margin-top:8px;font-size:12px;color:var(--text-secondary);font-style:italic"></div>
+  </div>
+
+  <!-- Market Overview -->
+  <div class="card card-full">
+    <div class="card-title"><span class="icon">🌐</span> Market Overview</div>
+    <div style="overflow-x:auto">
+      <table class="market-table">
+        <thead><tr>
+          <th>Symbol</th>
+          <th>LTP</th>
+          <th>Open</th>
+          <th>High</th>
+          <th>Low</th>
+          <th>Chg%</th>
+          <th>Vol</th>
+        </tr></thead>
+        <tbody id="marketBody">
+          <tr><td colspan="7" style="text-align:center;color:var(--text-dim);font-style:italic">Waiting for market data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Open Positions -->
+  <div class="card card-wide">
+    <div class="card-title"><span class="icon">📋</span> Open Positions</div>
+    <div style="overflow-x:auto">
+      <table class="positions-table">
+        <thead><tr>
+          <th>Symbol</th>
+          <th>Side</th>
+          <th>Qty</th>
+          <th>Entry</th>
+          <th>P&amp;L</th>
+        </tr></thead>
+        <tbody id="positionsBody">
+          <tr><td colspan="5" style="text-align:center;color:var(--text-dim);font-style:italic">No open positions</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Activity Log -->
+  <div class="card">
+    <div class="card-title"><span class="icon">📜</span> Activity Log</div>
+    <div class="activity-list" id="activityLog">
+      <span style="color:var(--text-dim);font-style:italic;font-size:12px">Waiting for activity...</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const state = {
+  connected: false,
+  lastState: null,
+};
+
+function formatNumber(n) {
+  return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatCompact(n) {
+  if (Math.abs(n) >= 1e7) return (n / 1e7).toFixed(2) + 'Cr';
+  if (Math.abs(n) >= 1e5) return (n / 1e5).toFixed(2) + 'L';
+  if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return Number(n).toFixed(2);
+}
+
+function updateDashboard(data) {
+  // Header badges
+  const modeBadge = document.getElementById('modeBadge');
+  modeBadge.textContent = data.trading_mode.toUpperCase();
+  modeBadge.className = 'badge ' + (data.trading_mode === 'live' ? 'badge-live' : 'badge-paper');
+
+  const dataBadge = document.getElementById('dataBadge');
+  dataBadge.textContent = data.data_source.toUpperCase();
+  dataBadge.className = 'badge ' + (data.data_source === 'live' ? 'badge-live-data' : data.data_source === 'yfinance' ? 'badge-yfinance' : 'badge-simulated');
+
+  document.getElementById('sessionTime').textContent = 'Session: ' + data.session_elapsed;
+
+  // Account
+  const bal = data.current_balance;
+  const start = data.starting_balance;
+  document.getElementById('balance').textContent = 'Rs. ' + formatNumber(bal);
+  document.getElementById('balance').className = 'stat-value' + (bal >= start ? ' green' : ' red');
+  document.getElementById('pnl').textContent = 'Rs. ' + formatNumber(data.total_pnl) + ' (' + (data.total_pnl >= 0 ? '+' : '') + data.pnl_percent + '%)';
+  document.getElementById('pnl').className = 'stat-value' + (data.total_pnl >= 0 ? ' green' : ' red');
+  document.getElementById('realizedPnl').textContent = 'Rs. ' + formatNumber(data.realized_pnl);
+  document.getElementById('realizedPnl').className = 'stat-value' + (data.realized_pnl >= 0 ? ' green' : ' red');
+  document.getElementById('unrealizedPnl').textContent = 'Rs. ' + formatNumber(data.unrealized_pnl);
+  document.getElementById('unrealizedPnl').className = 'stat-value' + (data.unrealized_pnl >= 0 ? ' green' : ' red');
+  document.getElementById('bestTrade').textContent = 'Rs. ' + formatNumber(data.best_trade);
+  document.getElementById('worstTrade').textContent = 'Rs. ' + formatNumber(data.worst_trade);
+
+  // Trades
+  document.getElementById('totalTrades').textContent = data.total_trades;
+  document.getElementById('winningTrades').textContent = data.winning_trades;
+  document.getElementById('losingTrades').textContent = data.losing_trades;
+  const wr = data.win_rate;
+  document.getElementById('winRate').textContent = wr + '%';
+  document.getElementById('winRate').className = 'stat-value ' + (wr >= 50 ? 'green' : wr >= 40 ? 'yellow' : 'red');
+  const wrBar = document.getElementById('winRateBar');
+  wrBar.style.width = Math.min(wr, 100) + '%';
+  wrBar.style.background = wr >= 50 ? 'var(--accent-green)' : wr >= 40 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+
+  // Regime
+  const regime = data.current_regime || 'unknown';
+  const badge = document.getElementById('regimeBadge');
+  const regimeLabels = { trending_up: '🟢 BULL', trending_down: '🔴 BEAR', ranging: '🟡 RANGE', volatile: '🟣 VOLATILE', unknown: '⚪ UNKNOWN' };
+  badge.textContent = regimeLabels[regime] || '⚪ UNKNOWN';
+  badge.className = 'regime-badge regime-' + regime;
+
+  const conf = data.regime_confidence;
+  document.getElementById('regimeConfidence').textContent = Math.round(conf * 100) + '%';
+  const confBar = document.getElementById('confidenceBar');
+  confBar.style.width = Math.min(conf * 100, 100) + '%';
+  confBar.style.background = conf >= 0.7 ? 'var(--accent-green)' : conf >= 0.5 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+
+  const tags = document.getElementById('strategyTags');
+  tags.innerHTML = '';
+  if (data.active_strategies && data.active_strategies.length > 0) {
+    data.active_strategies.forEach(s => {
+      const t = document.createElement('span');
+      t.className = 'strategy-tag';
+      t.textContent = s;
+      tags.appendChild(t);
+    });
+  }
+
+  // Agent Activity
+  document.getElementById('cyclesRun').textContent = data.cycles_run;
+  document.getElementById('signalsGenerated').textContent = data.signals_generated;
+  document.getElementById('signalsValidated').textContent = data.signals_validated;
+  document.getElementById('signalsRejected').textContent = data.signals_rejected;
+  document.getElementById('tradesRiskRejected').textContent = data.trades_risk_rejected;
+  document.getElementById('tradesApproved').textContent = data.trades_approved;
+
+  // AI Decision
+  const signalDisplay = document.getElementById('signalDisplay');
+  if (data.current_signal && data.current_signal.signal_type) {
+    const sig = data.current_signal;
+    const isBuy = sig.signal_type === 'BUY';
+    signalDisplay.innerHTML =
+      '<span class="signal-type signal-' + sig.signal_type + '">' + sig.signal_type + '</span> ' +
+      '<span style="font-weight:700;font-size:15px;margin-left:8px">' + (sig.symbol || '') + '</span>' +
+      '<span style="color:var(--text-dim);margin-left:8px">' + (sig.strategy || '') + '</span>' +
+      '<span style="margin-left:8px;color:' + (isBuy ? 'var(--accent-green)' : 'var(--accent-red)') + '">' +
+      Math.round((sig.confidence || 0) * 100) + '% conf</span>';
+  } else {
+    signalDisplay.innerHTML = '<span style="color:var(--text-dim);font-style:italic;font-size:13px">No active signal</span>';
+  }
+  document.getElementById('decisionReason').textContent = data.last_decision_reason || '';
+
+  // Market Overview
+  const marketBody = document.getElementById('marketBody');
+  const quotes = data.market_quotes || {};
+  const entries = Object.entries(quotes);
+  if (entries.length > 0) {
+    entries.sort((a, b) => (b[1].change_percent || 0) - (a[1].change_percent || 0));
+    marketBody.innerHTML = entries.map(([sym, q]) => {
+      const chg = q.change_percent || 0;
+      const cls = chg >= 0 ? 'trend-up' : 'trend-down';
+      const arrow = chg >= 0 ? '▲' : '▼';
+      return '<tr><td class="symbol-name">' + sym + '</td>' +
+        '<td>Rs. ' + formatCompact(q.last_price || 0) + '</td>' +
+        '<td>Rs. ' + formatCompact(q.open || 0) + '</td>' +
+        '<td>Rs. ' + formatCompact(q.high || 0) + '</td>' +
+        '<td>Rs. ' + formatCompact(q.low || 0) + '</td>' +
+        '<td class="' + cls + '">' + arrow + ' ' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</td>' +
+        '<td>' + (q.volume ? Number(q.volume).toLocaleString('en-IN') : '-') + '</td></tr>';
+    }).join('');
+  } else {
+    marketBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-dim);font-style:italic">Waiting for market data...</td></tr>';
+  }
+
+  // Positions
+  const posBody = document.getElementById('positionsBody');
+  const positions = data.open_positions || [];
+  if (positions.length > 0) {
+    posBody.innerHTML = positions.map(p => {
+      const pnl = p.pnl || 0;
+      const sideColor = p.side === 'BUY' ? 'green' : 'red';
+      const pnlColor = pnl >= 0 ? 'green' : 'red';
+      return '<tr><td class="symbol-name">' + (p.symbol || '') + '</td>' +
+        '<td style="color:var(--accent-' + sideColor + ')">' + (p.side || '') + '</td>' +
+        '<td>' + (p.qty || 0) + '</td>' +
+        '<td>Rs. ' + formatNumber(p.entry || 0) + '</td>' +
+        '<td style="color:var(--accent-' + pnlColor + ')">' + (pnl >= 0 ? '+' : '') + 'Rs. ' + formatNumber(pnl) + '</td></tr>';
+    }).join('');
+  } else {
+    posBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-dim);font-style:italic">No open positions</td></tr>';
+  }
+
+  // Activity Log
+  const logEl = document.getElementById('activityLog');
+  const log = data.activity_log || [];
+  if (log.length > 0) {
+    const levelIcons = { INFO: 'ℹ', SUCCESS: '✓', WARNING: '⚠', ERROR: '✗', TRADE: '💹' };
+    logEl.innerHTML = log.map(e => {
+      const icon = levelIcons[e.level] || '•';
+      return '<div class="activity-item activity-' + e.level.toLowerCase() + '">' +
+        '<span class="activity-time">' + (e.time || '') + '</span>' +
+        '<span class="activity-icon" style="color:var(--text-dim)">' + icon + '</span>' +
+        '<span class="activity-msg">' + (e.message || '') + '</span></div>';
+    }).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+  } else {
+    logEl.innerHTML = '<span style="color:var(--text-dim);font-style:italic;font-size:12px">Waiting for activity...</span>';
+  }
+}
+
+function connectSSE() {
+  const dot = document.getElementById('connDot');
+  const text = document.getElementById('connText');
+  dot.className = 'connection-dot connecting';
+  text.textContent = 'Connecting...';
+
+  const evtSource = new EventSource('/api/events');
+
+  evtSource.addEventListener('connected', () => {
+    state.connected = true;
+    dot.className = 'connection-dot connected';
+    text.textContent = 'Connected';
+  });
+
+  evtSource.addEventListener('state', (e) => {
+    if (!state.connected) {
+      state.connected = true;
+      dot.className = 'connection-dot connected';
+      text.textContent = 'Connected';
+    }
+    try {
+      const data = JSON.parse(e.data);
+      updateDashboard(data);
+    } catch (err) {
+      console.error('Parse error:', err);
+    }
+  });
+
+  evtSource.addEventListener('ping', () => {});
+
+  evtSource.onerror = () => {
+    state.connected = false;
+    dot.className = 'connection-dot disconnected';
+    text.textContent = 'Disconnected';
+    evtSource.close();
+    setTimeout(connectSSE, 3000);
+  };
+}
+
+// Initial fetch + SSE
+fetch('/api/state')
+  .then(r => r.json())
+  .then(data => {
+    updateDashboard(data);
+    connectSSE();
+  })
+  .catch(() => {
+    connectSSE();
+  });
+</script>
+</body>
+</html>
