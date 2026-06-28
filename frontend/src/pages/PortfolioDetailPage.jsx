@@ -26,7 +26,7 @@ export default function PortfolioDetailPage() {
   async function fetchPortfolioDetails() {
     try {
       const { data: res } = await api.get(`/api/v1/analysis/portfolio/${portfolioId}`)
-      
+
       // If the portfolio is not ready yet, redirect to the result polling page
       if (res.portfolio?.status !== 'ready') {
         window.location.href = `/analyze/result/${portfolioId}`
@@ -97,7 +97,7 @@ export default function PortfolioDetailPage() {
       <div className="max-w-md mx-auto py-16 px-4">
         <Card className="border-red-950 bg-red-950/10 text-center space-y-4">
           <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
-          <h2 className="text-xl font-bold text-white">Error Loading Portfolio</h2>
+          <h2 className="text-xl font-bold text-[#F4E1C1]">Error Loading Portfolio</h2>
           <p className="text-xs text-red-300 bg-slate-950/60 p-3 rounded-lg border border-slate-900 leading-relaxed font-mono">
             {error}
           </p>
@@ -114,15 +114,15 @@ export default function PortfolioDetailPage() {
       {/* Header section */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <Link to="/dashboard" className="text-xs text-[#00D4FF] hover:underline flex items-center gap-1 mb-1 font-medium">
+          <Link to="/dashboard" className="text-xs text-[#008080] hover:underline flex items-center gap-1 mb-1 font-medium">
             <ArrowLeft className="h-3 w-3" /> Back to Dashboard
           </Link>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl font-extrabold text-[#F4E1C1] tracking-tight">
             {data.portfolio?.name}
           </h1>
-          <p className="text-sm text-slate-400">
-            Portfolio Value: <span className="font-bold text-white font-mono">₹{data.portfolio?.amount?.toLocaleString('en-IN')}</span> | Target Risk:{' '}
-            <span className="font-bold text-white capitalize">{data.portfolio?.risk_level}</span>
+          <p className="text-sm text-[rgba(244,225,193,0.55)]">
+            Portfolio Value: <span className="font-bold text-[#F4E1C1] font-mono">₹{data.portfolio?.amount?.toLocaleString('en-IN')}</span> | Target Risk:{' '}
+            <span className="font-bold text-[#F4E1C1] capitalize">{data.portfolio?.risk_level}</span>
           </p>
         </div>
       </div>
@@ -137,11 +137,11 @@ export default function PortfolioDetailPage() {
         <div className="space-y-6">
           {/* Rebalance Options */}
           <Card className="space-y-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
-              <Settings className="h-4 w-4 text-[#00D4FF]" />
+            <h3 className="text-sm font-bold text-[#F4E1C1] flex items-center gap-1.5 uppercase tracking-wider">
+              <Settings className="h-4 w-4 text-[#008080]" />
               Strategy Rebalancing
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-[rgba(244,225,193,0.55)]">
               Change the target risk constraint. This will re-run the mean-variance optimizer and generate new holding weights.
             </p>
 
@@ -149,7 +149,7 @@ export default function PortfolioDetailPage() {
               <select
                 value={newRiskLevel}
                 onChange={(e) => setNewRiskLevel(e.target.value)}
-                className="flex-1 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-white focus:border-[#00D4FF] focus:outline-none"
+                className="flex-1 rounded-lg border border-[rgba(0,128,128,0.2)] bg-[rgba(13,43,43,0.5)] px-3 py-2 text-xs text-[#F4E1C1] focus:border-[#008080] focus:outline-none"
               >
                 <option value="low">Low Risk (Max 10% per stock)</option>
                 <option value="medium">Medium Risk (Max 15% per stock)</option>
@@ -176,16 +176,16 @@ export default function PortfolioDetailPage() {
           {/* What-If AI Advisor Chat */}
           <Card className="flex flex-col h-[480px] justify-between">
             <div className="space-y-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5 uppercase tracking-wider border-b border-slate-800 pb-3">
-                <MessageSquare className="h-4 w-4 text-[#7C3AED]" />
+              <h3 className="text-sm font-bold text-[#F4E1C1] flex items-center gap-1.5 uppercase tracking-wider border-b border-[rgba(0,128,128,0.2)] pb-3">
+                <MessageSquare className="h-4 w-4 text-[#9a6e3a]" />
                 What-If AI Advisor
               </h3>
-              
-              <div className="h-[310px] overflow-y-auto space-y-3 pr-1 text-xs scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+
+              <div className="h-[310px] overflow-y-auto space-y-3 pr-1 text-xs scrollbar-thin scrollbar-thumb-[rgba(0,128,128,0.2)] scrollbar-track-transparent">
                 {chatHistory.length === 0 ? (
-                  <div className="text-center text-slate-500 py-12 px-4 italic leading-relaxed">
+                  <div className="text-center text-[rgba(244,225,193,0.4)] py-12 px-4 italic leading-relaxed">
                     Ask questions about this strategy, e.g.:
-                    <div className="mt-2 text-[10px] not-italic text-slate-400 space-y-1">
+                    <div className="mt-2 text-[10px] not-italic text-[rgba(244,225,193,0.55)] space-y-1">
                       <p>"Why did you allocate to tech?"</p>
                       <p>"What is the impact of a Nifty 10% drop?"</p>
                     </div>
@@ -196,12 +196,12 @@ export default function PortfolioDetailPage() {
                       key={index}
                       className={`p-3 rounded-lg leading-relaxed ${
                         msg.role === 'user'
-                          ? 'bg-slate-800 text-white ml-6 text-right'
-                          : 'bg-[#111827] border border-slate-850 text-slate-300 mr-6'
+                          ? 'bg-[rgba(13,43,43,0.8)] text-[#F4E1C1] ml-6 text-right'
+                          : 'bg-[rgba(13,43,43,0.85)] border border-[rgba(0,128,128,0.2)] text-[rgba(244,225,193,0.75)] mr-6'
                       }`}
                     >
                       <span className={`text-[9px] font-black uppercase tracking-wider block mb-1 ${
-                        msg.role === 'user' ? 'text-[#00D4FF]' : 'text-[#7C3AED]'
+                        msg.role === 'user' ? 'text-[#008080]' : 'text-[#9a6e3a]'
                       }`}>
                         {msg.role === 'user' ? 'You' : 'AI Advisor'}
                       </span>
@@ -209,35 +209,36 @@ export default function PortfolioDetailPage() {
                     </div>
                   ))
                 )}
-                
+
                 {chatLoading && (
-                  <div className="bg-[#111827] border border-slate-850 p-3 rounded-lg mr-6 text-slate-400">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-[#7C3AED] block mb-1">
+                  <div className="bg-[rgba(13,43,43,0.85)] border border-[rgba(0,128,128,0.2)] p-3 rounded-lg mr-6 text-[rgba(244,225,193,0.55)]">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-[#9a6e3a] block mb-1">
                       AI Advisor
                     </span>
                     <div className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-[#00D4FF] rounded-full animate-bounce" />
-                      <span className="w-1.5 h-1.5 bg-[#00D4FF] rounded-full animate-bounce [animation-delay:0.2s]" />
-                      <span className="w-1.5 h-1.5 bg-[#00D4FF] rounded-full animate-bounce [animation-delay:0.4s]" />
+                      <span className="w-1.5 h-1.5 bg-[#008080] rounded-full animate-bounce" />
+                      <span className="w-1.5 h-1.5 bg-[#008080] rounded-full animate-bounce [animation-delay:0.2s]" />
+                      <span className="w-1.5 h-1.5 bg-[#008080] rounded-full animate-bounce [animation-delay:0.4s]" />
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            <form onSubmit={handleSendQuestion} className="flex gap-2 border-t border-slate-800 pt-3 mt-3">
+            <form onSubmit={handleSendQuestion} className="flex gap-2 border-t border-[rgba(0,128,128,0.2)] pt-3 mt-3">
               <input
                 type="text"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="Ask advisor..."
                 disabled={chatLoading}
-                className="flex-1 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-white focus:border-[#00D4FF] focus:outline-none"
+                className="flex-1 rounded-lg border border-[rgba(0,128,128,0.2)] bg-[rgba(13,43,43,0.5)] px-3 py-2 text-xs text-[#F4E1C1] focus:border-[#008080] focus:outline-none"
               />
               <button
                 type="submit"
                 disabled={chatLoading || !question.trim()}
-                className="p-2 bg-[#00D4FF] hover:bg-[#00D4FF]/90 disabled:opacity-50 text-[#0A0E1A] rounded-lg transition-colors cursor-pointer"
+                className="p-2 disabled:opacity-50 text-[#F4E1C1] rounded-lg transition-colors cursor-pointer"
+                style={{ background: '#008080' }}
               >
                 <Send className="h-3.5 w-3.5" />
               </button>

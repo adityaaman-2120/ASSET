@@ -18,7 +18,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
-const C = ['#00D4FF','#7C3AED','#10B981','#F59E0B','#EF4444','#EC4899','#6366F1','#84CC16','#F97316','#06B6D4']
+const C = ['#008080', '#9a6e3a', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#6366F1', '#84CC16', '#F97316', '#06B6D4']
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -30,10 +30,10 @@ function pct(n, dp = 1) {
   if (n == null) return '—'
   return `${n >= 0 ? '+' : ''}${(n * 100).toFixed(dp)}%`
 }
-function tickLabel(t) { return t?.replace('.NS','').replace('.BO','') || t }
+function tickLabel(t) { return t?.replace('.NS', '').replace('.BO', '') || t }
 
 const TOOLTIP_STYLE = {
-  contentStyle: { background: '#0A0E1A', border: '1px solid #1f2937', borderRadius: '10px', fontSize: 11 },
+  contentStyle: { background: '#0d2b2b', border: '1px solid #1f2937', borderRadius: '10px', fontSize: 11 },
   itemStyle: { color: '#e2e8f0' }, labelStyle: { color: '#6b7280' },
 }
 
@@ -43,17 +43,16 @@ const TABS = ['Overview', 'Holdings', 'Risk Analysis', 'Stress Test', 'What-If']
 
 function TabBar({ active, onChange }) {
   return (
-    <div className="flex gap-1 bg-slate-900/60 p-1 rounded-xl border border-slate-800 flex-wrap">
+    <div className="flex gap-1 bg-[rgba(13,43,43,0.5)] p-1 rounded-xl border border-[rgba(0,128,128,0.2)] flex-wrap">
       {TABS.map((t) => (
         <button
           key={t}
           type="button"
           onClick={() => onChange(t)}
-          className={`flex-1 min-w-max px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            active === t
-              ? 'bg-gradient-to-r from-[#00D4FF]/20 to-[#7C3AED]/20 text-white border border-[#00D4FF]/30'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
-          }`}
+          className={`flex-1 min-w-max px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${active === t
+              ? 'bg-gradient-to-r from-[rgba(0,128,128,0.2)] to-[rgba(154,110,58,0.2)] text-[#F4E1C1] border border-[#008080]/30'
+              : 'text-[rgba(244,225,193,0.55)] hover:text-[#F4E1C1] hover:bg-[rgba(0,128,128,0.08)]'
+            }`}
         >
           {t}
         </button>
@@ -102,7 +101,7 @@ function RiskGauge({ score = 5 }) {
         <text x="64" y="20" fontSize="9" fill="#4b5563" textAnchor="middle">Med</text>
         <text x="116" y="88" fontSize="9" fill="#4b5563" textAnchor="middle">High</text>
       </svg>
-      <p className="text-2xl font-black mt-1" style={{ color }}>{score}<span className="text-sm text-slate-500">/10</span></p>
+      <p className="text-2xl font-black mt-1" style={{ color }}>{score}<span className="text-sm text-[rgba(244,225,193,0.4)]">/10</span></p>
     </div>
   )
 }
@@ -147,15 +146,15 @@ function OverviewTab({ data }) {
       {/* Summary KPI row */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {[
-          { label: 'Portfolio Value', value: fmtINR(p.amount), icon: <TrendingUp className="h-4 w-4 text-[#00D4FF]" />, color: 'text-[#00D4FF]' },
+          { label: 'Portfolio Value', value: fmtINR(p.amount), icon: <TrendingUp className="h-4 w-4 text-[#008080]" />, color: 'text-[#008080]' },
           { label: 'Expected Return (p.a.)', value: pct(p.expected_return), icon: <Activity className="h-4 w-4 text-emerald-400" />, color: 'text-emerald-400' },
           { label: 'Volatility (p.a.)', value: pct(p.volatility), icon: <Zap className="h-4 w-4 text-amber-400" />, color: 'text-amber-400' },
-          { label: 'Sharpe Ratio', value: p.sharpe?.toFixed(2) ?? '—', icon: <Star className="h-4 w-4 text-[#7C3AED]" />, color: 'text-[#7C3AED]' },
+          { label: 'Sharpe Ratio', value: p.sharpe?.toFixed(2) ?? '—', icon: <Star className="h-4 w-4 text-[#9a6e3a]" />, color: 'text-[#9a6e3a]' },
         ].map((k) => (
-          <Card key={k.label} className="p-4 bg-slate-900/40 border-slate-800/60 flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-slate-800/60 flex-shrink-0">{k.icon}</div>
+          <Card key={k.label} className="p-4 bg-[rgba(13,43,43,0.3)] border-[rgba(0,128,128,0.2)]/60 flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-[rgba(13,43,43,0.8)]/60 flex-shrink-0">{k.icon}</div>
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">{k.label}</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)]">{k.label}</p>
               <p className={`text-xl font-black font-mono mt-0.5 ${k.color}`}>{k.value}</p>
             </div>
           </Card>
@@ -164,15 +163,15 @@ function OverviewTab({ data }) {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Risk Gauge */}
-        <Card className="flex flex-col items-center justify-center py-6 bg-slate-900/30 border-slate-800/60">
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">Portfolio Risk Score</p>
+        <Card className="flex flex-col items-center justify-center py-6 bg-[rgba(13,43,43,0.3)] border-[rgba(0,128,128,0.2)]/60">
+          <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)] mb-2">Portfolio Risk Score</p>
           <RiskGauge score={riskScore} />
-          <p className="text-xs text-slate-500 mt-2 italic">{critique.rationale?.slice(0, 80)}…</p>
+          <p className="text-xs text-[rgba(244,225,193,0.4)] mt-2 italic">{critique.rationale?.slice(0, 80)}…</p>
         </Card>
 
         {/* Sector donut */}
-        <Card className="bg-slate-900/30 border-slate-800/60">
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-3">Sector Allocation</p>
+        <Card className="bg-[rgba(13,43,43,0.3)] border-[rgba(0,128,128,0.2)]/60">
+          <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)] mb-3">Sector Allocation</p>
           {sectorData.length > 0 ? (
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
@@ -185,12 +184,12 @@ function OverviewTab({ data }) {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          ) : <p className="text-slate-500 text-xs italic py-8 text-center">No sector data</p>}
+          ) : <p className="text-[rgba(244,225,193,0.4)] text-xs italic py-8 text-center">No sector data</p>}
         </Card>
 
         {/* Holdings weight bars */}
-        <Card className="bg-slate-900/30 border-slate-800/60">
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-3">Portfolio Weights</p>
+        <Card className="bg-[rgba(13,43,43,0.3)] border-[rgba(0,128,128,0.2)]/60">
+          <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)] mb-3">Portfolio Weights</p>
           {holdingBars.length > 0 ? (
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
@@ -204,18 +203,18 @@ function OverviewTab({ data }) {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          ) : <p className="text-slate-500 text-xs italic py-8 text-center">No holding data</p>}
+          ) : <p className="text-[rgba(244,225,193,0.4)] text-xs italic py-8 text-center">No holding data</p>}
         </Card>
       </div>
 
       {/* Projection chart */}
-      <Card className="bg-slate-900/30 border-slate-800/60">
-        <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-4">Projected Value (Base / Optimistic / Pessimistic)</p>
+      <Card className="bg-[rgba(13,43,43,0.3)] border-[rgba(0,128,128,0.2)]/60">
+        <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)] mb-4">Projected Value (Base / Optimistic / Pessimistic)</p>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={projData} margin={{ left: 16, right: 16 }}>
               <defs>
-                {[['optGrad','#10B981'],['baseGrad','#00D4FF'],['pessGrad','#EF4444']].map(([id, c]) => (
+                {[['optGrad', '#10B981'], ['baseGrad', '#008080'], ['pessGrad', '#EF4444']].map(([id, c]) => (
                   <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={c} stopOpacity={0.2} />
                     <stop offset="95%" stopColor={c} stopOpacity={0} />
@@ -224,10 +223,10 @@ function OverviewTab({ data }) {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
               <XAxis dataKey="year" fontSize={10} stroke="#4b5563" />
-              <YAxis tickFormatter={(v) => `₹${(v/100000).toFixed(0)}L`} fontSize={10} stroke="#4b5563" width={48} />
+              <YAxis tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`} fontSize={10} stroke="#4b5563" width={48} />
               <Tooltip {...TOOLTIP_STYLE} formatter={(v, n) => [fmtINR(v), n]} />
               <Area type="monotone" dataKey="optimistic" stroke="#10B981" strokeWidth={1.5} fill="url(#optGrad)" name="Optimistic" strokeDasharray="4 2" />
-              <Area type="monotone" dataKey="base" stroke="#00D4FF" strokeWidth={2.5} fill="url(#baseGrad)" name="Base Case" />
+              <Area type="monotone" dataKey="base" stroke="#008080" strokeWidth={2.5} fill="url(#baseGrad)" name="Base Case" />
               <Area type="monotone" dataKey="pessimistic" stroke="#EF4444" strokeWidth={1.5} fill="url(#pessGrad)" name="Pessimistic" strokeDasharray="4 2" />
             </AreaChart>
           </ResponsiveContainer>
@@ -280,14 +279,14 @@ function ShapBar({ shap }) {
   const maxAbs = Math.max(...entries.map(([, v]) => Math.abs(v)), 0.001)
   return (
     <div className="space-y-2 mt-3">
-      <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">Top SHAP Features (Why this stock?)</p>
+      <p className="text-[9px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)]">Top SHAP Features (Why this stock?)</p>
       {entries.map(([feat, val]) => {
         const pctW = (Math.abs(val) / maxAbs) * 100
         const pos = val >= 0
         return (
           <div key={feat} className="flex items-center gap-2 text-[10px]">
-            <span className="w-28 text-slate-400 truncate flex-shrink-0">{feat.replace(/_/g,' ')}</span>
-            <div className="flex-1 h-4 bg-slate-800 rounded overflow-hidden relative">
+            <span className="w-28 text-[rgba(244,225,193,0.55)] truncate flex-shrink-0">{feat.replace(/_/g, ' ')}</span>
+            <div className="flex-1 h-4 bg-[rgba(13,43,43,0.8)] rounded overflow-hidden relative">
               <div
                 className={`h-full rounded transition-all ${pos ? 'bg-emerald-500/60' : 'bg-red-500/60'}`}
                 style={{ width: `${pctW}%`, marginLeft: pos ? 0 : undefined }}
@@ -327,37 +326,36 @@ function HoldingsTab({ data }) {
     })
 
   const SortIcon = ({ col }) => sortKey === col
-    ? (sortDir === 'desc' ? <ChevronDown className="h-3 w-3 inline ml-0.5 text-[#00D4FF]" /> : <ChevronUp className="h-3 w-3 inline ml-0.5 text-[#00D4FF]" />)
+    ? (sortDir === 'desc' ? <ChevronDown className="h-3 w-3 inline ml-0.5 text-[#008080]" /> : <ChevronUp className="h-3 w-3 inline ml-0.5 text-[#008080]" />)
     : null
 
   return (
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-xs text-slate-500 font-bold">Sector:</span>
+        <span className="text-xs text-[rgba(244,225,193,0.4)] font-bold">Sector:</span>
         {sectors.map((s) => (
           <button key={s} type="button" onClick={() => setFilterSector(s)}
-            className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer ${
-              filterSector === s
-                ? 'border-[#00D4FF]/50 bg-[#00D4FF]/10 text-[#00D4FF]'
-                : 'border-slate-800 text-slate-500 hover:border-slate-700 hover:text-slate-300'
-            }`}>
+            className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer ${filterSector === s
+                ? 'border-[#008080]/50 bg-[rgba(0,128,128,0.1)] text-[#008080]'
+                : 'border-[rgba(0,128,128,0.2)] text-[rgba(244,225,193,0.4)] hover:border-[rgba(0,128,128,0.25)] hover:text-[rgba(244,225,193,0.75)]'
+              }`}>
             {s}
           </button>
         ))}
-        <span className="ml-auto text-xs text-slate-500">{filtered.length} holdings</span>
+        <span className="ml-auto text-xs text-[rgba(244,225,193,0.4)]">{filtered.length} holdings</span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-800">
+      <div className="overflow-x-auto rounded-xl border border-[rgba(0,128,128,0.2)]">
         <table className="w-full text-xs">
           <thead>
-            <tr className="bg-slate-900/60 border-b border-slate-800">
+            <tr className="bg-[rgba(13,43,43,0.5)] border-b border-[rgba(0,128,128,0.2)]">
               {[
-                ['ticker','Ticker'],['sector','Sector'],['weight','Weight %'],
-                ['predicted_return','Pred. Return'],['confidence','Confidence'],['shap_explanation','Explanation'],
+                ['ticker', 'Ticker'], ['sector', 'Sector'], ['weight', 'Weight %'],
+                ['predicted_return', 'Pred. Return'], ['confidence', 'Confidence'], ['shap_explanation', 'Explanation'],
               ].map(([key, label]) => (
                 <th key={key}
-                  className={`px-4 py-3 text-left font-black uppercase tracking-wider text-slate-500 ${key !== 'shap_explanation' ? 'cursor-pointer hover:text-slate-300 select-none' : ''}`}
+                  className={`px-4 py-3 text-left font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)] ${key !== 'shap_explanation' ? 'cursor-pointer hover:text-[rgba(244,225,193,0.75)] select-none' : ''}`}
                   onClick={() => key !== 'shap_explanation' && toggleSort(key)}
                 >
                   {label}<SortIcon col={key} />
@@ -365,29 +363,29 @@ function HoldingsTab({ data }) {
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60">
+          <tbody className="divide-y divide-[rgba(0,128,128,0.15)]/60">
             {filtered.map((h) => {
               const isExp = expanded === h.ticker
               return (
                 <React.Fragment key={h.ticker}>
                   <tr
-                    className={`transition-colors cursor-pointer ${isExp ? 'bg-[#00D4FF]/5' : 'hover:bg-slate-900/40'}`}
+                    className={`transition-colors cursor-pointer ${isExp ? 'bg-[rgba(0,128,128,0.05)]' : 'hover:bg-[rgba(13,43,43,0.3)]'}`}
                     onClick={() => setExpanded(isExp ? null : h.ticker)}
                   >
-                    <td className="px-4 py-3 font-mono font-black text-white">{tickLabel(h.ticker)}</td>
+                    <td className="px-4 py-3 font-mono font-black text-[#F4E1C1]">{tickLabel(h.ticker)}</td>
                     <td className="px-4 py-3">
                       {h.sector ? (
-                        <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-semibold">
-                          {h.sector.replace(/_/g,' ')}
+                        <span className="px-2 py-0.5 rounded-full bg-[rgba(13,43,43,0.8)] text-[rgba(244,225,193,0.75)] text-[10px] font-semibold">
+                          {h.sector.replace(/_/g, ' ')}
                         </span>
                       ) : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                          <div className="h-full bg-[#00D4FF] rounded-full" style={{ width: `${Math.min(100, (h.weight || 0) * 100 / 0.25 * 100)}%` }} />
+                        <div className="w-16 h-1.5 bg-[rgba(13,43,43,0.8)] rounded-full overflow-hidden">
+                          <div className="h-full bg-[#008080] rounded-full" style={{ width: `${Math.min(100, (h.weight || 0) * 100 / 0.25 * 100)}%` }} />
                         </div>
-                        <span className="font-mono font-bold text-white">{((h.weight || 0) * 100).toFixed(1)}%</span>
+                        <span className="font-mono font-bold text-[#F4E1C1]">{((h.weight || 0) * 100).toFixed(1)}%</span>
                       </div>
                     </td>
                     <td className={`px-4 py-3 font-mono font-bold ${(h.predicted_return || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -396,14 +394,14 @@ function HoldingsTab({ data }) {
                     <td className="px-4 py-3">
                       {h.confidence != null ? (
                         <div className="flex items-center gap-2">
-                          <div className="w-12 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-[#7C3AED] rounded-full" style={{ width: `${(h.confidence * 100).toFixed(0)}%` }} />
+                          <div className="w-12 h-1.5 bg-[rgba(13,43,43,0.8)] rounded-full overflow-hidden">
+                            <div className="h-full bg-[#9a6e3a] rounded-full" style={{ width: `${(h.confidence * 100).toFixed(0)}%` }} />
                           </div>
-                          <span className="text-slate-300 font-mono">{(h.confidence * 100).toFixed(0)}%</span>
+                          <span className="text-[rgba(244,225,193,0.75)] font-mono">{(h.confidence * 100).toFixed(0)}%</span>
                         </div>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-slate-500 max-w-xs truncate italic text-[10px]">
+                    <td className="px-4 py-3 text-[rgba(244,225,193,0.4)] max-w-xs truncate italic text-[10px]">
                       {h.shap_explanation?.summary || 'Click to expand ↓'}
                     </td>
                   </tr>
@@ -411,12 +409,12 @@ function HoldingsTab({ data }) {
                     <tr className="bg-slate-950/40">
                       <td colSpan={6} className="px-6 py-4">
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-[#00D4FF] mb-2">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-[#008080] mb-2">
                             {tickLabel(h.ticker)} — Full SHAP Breakdown
                           </p>
                           <ShapBar shap={h.shap_explanation} />
                           {!h.shap_explanation?.features && (
-                            <p className="text-xs text-slate-500 italic">
+                            <p className="text-xs text-[rgba(244,225,193,0.4)] italic">
                               {h.shap_explanation?.summary || 'No SHAP data available for this holding.'}
                             </p>
                           )}
@@ -430,7 +428,7 @@ function HoldingsTab({ data }) {
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <p className="text-center text-slate-500 text-sm italic py-8">No holdings match this filter.</p>
+          <p className="text-center text-[rgba(244,225,193,0.4)] text-sm italic py-8">No holdings match this filter.</p>
         )}
       </div>
     </div>
@@ -477,8 +475,8 @@ function RiskTab({ data }) {
   return (
     <div className="space-y-6">
       {/* Risk warnings */}
-      <Card className="space-y-3 border-slate-800/60">
-        <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">LLM Risk Warnings</p>
+      <Card className="space-y-3 border-[rgba(0,128,128,0.2)]/60">
+        <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)]">LLM Risk Warnings</p>
         {warnings.length === 0 ? (
           <div className="flex items-center gap-2 text-emerald-400 text-sm">
             <CheckCircle className="h-4 w-4" /> No critical warnings identified
@@ -488,17 +486,15 @@ function RiskTab({ data }) {
             {warnings.map((w, i) => {
               const sev = severity(i)
               return (
-                <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${
-                  sev === 'HIGH' ? 'bg-red-950/20 border border-red-500/20' :
-                  sev === 'MEDIUM' ? 'bg-amber-950/20 border border-amber-500/20' :
-                  'bg-slate-900/40 border border-slate-800'
-                }`}>
-                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 ${
-                    sev === 'HIGH' ? 'bg-red-500/20 text-red-400' :
-                    sev === 'MEDIUM' ? 'bg-amber-500/20 text-amber-400' :
-                    'bg-slate-800 text-slate-400'
-                  }`}>{sev}</span>
-                  <p className="text-sm text-slate-300">{w}</p>
+                <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${sev === 'HIGH' ? 'bg-red-950/20 border border-red-500/20' :
+                    sev === 'MEDIUM' ? 'bg-amber-950/20 border border-amber-500/20' :
+                      'bg-[rgba(13,43,43,0.3)] border border-[rgba(0,128,128,0.2)]'
+                  }`}>
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5 ${sev === 'HIGH' ? 'bg-red-500/20 text-red-400' :
+                      sev === 'MEDIUM' ? 'bg-amber-500/20 text-amber-400' :
+                        'bg-[rgba(13,43,43,0.8)] text-[rgba(244,225,193,0.55)]'
+                    }`}>{sev}</span>
+                  <p className="text-sm text-[rgba(244,225,193,0.75)]">{w}</p>
                 </div>
               )
             })}
@@ -511,22 +507,22 @@ function RiskTab({ data }) {
         {[
           { label: 'Max Drawdown Est.', value: `-${(maxDD * 100).toFixed(1)}%`, sub: 'Based on 2× annual vol', color: 'text-red-400', icon: <TrendingDown className="h-5 w-5 text-red-400" /> },
           { label: 'Value at Risk (95%)', value: `-${(var95 * 100).toFixed(1)}%`, sub: 'Monthly 1-tail', color: 'text-amber-400', icon: <Shield className="h-5 w-5 text-amber-400" /> },
-          { label: 'Risk Score', value: `${critique.risk_score ?? 5}/10`, sub: critique.rationale?.slice(0, 50) + '…', color: 'text-slate-300', icon: <Activity className="h-5 w-5 text-[#00D4FF]" /> },
+          { label: 'Risk Score', value: `${critique.risk_score ?? 5}/10`, sub: critique.rationale?.slice(0, 50) + '…', color: 'text-[rgba(244,225,193,0.75)]', icon: <Activity className="h-5 w-5 text-[#008080]" /> },
         ].map((m) => (
-          <Card key={m.label} className="bg-slate-900/40 border-slate-800/60 flex items-start gap-3 p-5">
-            <div className="p-2 rounded-lg bg-slate-800">{m.icon}</div>
+          <Card key={m.label} className="bg-[rgba(13,43,43,0.3)] border-[rgba(0,128,128,0.2)]/60 flex items-start gap-3 p-5">
+            <div className="p-2 rounded-lg bg-[rgba(13,43,43,0.8)]">{m.icon}</div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">{m.label}</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)]">{m.label}</p>
               <p className={`text-2xl font-black font-mono ${m.color}`}>{m.value}</p>
-              <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{m.sub}</p>
+              <p className="text-[10px] text-[rgba(244,225,193,0.4)] mt-0.5 line-clamp-1">{m.sub}</p>
             </div>
           </Card>
         ))}
       </div>
 
       {/* Benchmark comparison */}
-      <Card className="bg-slate-900/30 border-slate-800/60">
-        <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-4">Portfolio vs Nifty 50 Benchmark</p>
+      <Card className="bg-[rgba(13,43,43,0.3)] border-[rgba(0,128,128,0.2)]/60">
+        <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)] mb-4">Portfolio vs Nifty 50 Benchmark</p>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={benchmarkComp} margin={{ left: 0, right: 16 }}>
@@ -535,8 +531,8 @@ function RiskTab({ data }) {
               <YAxis fontSize={10} stroke="#4b5563" />
               <Tooltip {...TOOLTIP_STYLE} />
               <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey="portfolio" name="Your Portfolio" fill="#00D4FF" radius={[4,4,0,0]} />
-              <Bar dataKey="nifty" name="Nifty 50" fill="#4b5563" radius={[4,4,0,0]} />
+              <Bar dataKey="portfolio" name="Your Portfolio" fill="#008080" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="nifty" name="Nifty 50" fill="#4b5563" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -544,29 +540,29 @@ function RiskTab({ data }) {
 
       {/* Correlation heatmap */}
       {topH.length > 1 && (
-        <Card className="bg-slate-900/30 border-slate-800/60">
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-3">Holdings Correlation Heatmap (estimated)</p>
+        <Card className="bg-[rgba(13,43,43,0.3)] border-[rgba(0,128,128,0.2)]/60">
+          <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)] mb-3">Holdings Correlation Heatmap (estimated)</p>
           <div className="overflow-x-auto">
             <table className="text-[10px] font-mono border-collapse">
               <thead>
                 <tr>
-                  <th className="p-2 text-slate-600" />
+                  <th className="p-2 text-[rgba(244,225,193,0.3)]" />
                   {topH.map((h) => (
-                    <th key={h.ticker} className="p-2 text-slate-400 font-bold">{tickLabel(h.ticker)}</th>
+                    <th key={h.ticker} className="p-2 text-[rgba(244,225,193,0.55)] font-bold">{tickLabel(h.ticker)}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {corrData.map((row) => (
                   <tr key={row.ticker}>
-                    <td className="p-2 text-slate-400 font-bold pr-3">{row.ticker}</td>
+                    <td className="p-2 text-[rgba(244,225,193,0.55)] font-bold pr-3">{row.ticker}</td>
                     {topH.map((h) => {
                       const v = row[tickLabel(h.ticker)] ?? 0
                       return (
                         <td key={h.ticker} className="p-0">
                           <div
                             className="w-14 h-10 flex items-center justify-center font-bold rounded-sm m-0.5"
-                            style={{ background: corrColor(v), color: v > 0.5 ? '#0A0E1A' : '#fff' }}
+                            style={{ background: corrColor(v), color: v > 0.5 ? '#0d2b2b' : '#fff' }}
                           >
                             {v.toFixed(2)}
                           </div>
@@ -578,7 +574,7 @@ function RiskTab({ data }) {
               </tbody>
             </table>
           </div>
-          <p className="text-[9px] text-slate-600 mt-2 italic">* Correlation estimates based on sector proximity. Full correlation requires historical bar data.</p>
+          <p className="text-[9px] text-[rgba(244,225,193,0.3)] mt-2 italic">* Correlation estimates based on sector proximity. Full correlation requires historical bar data.</p>
         </Card>
       )}
     </div>
@@ -601,17 +597,17 @@ const STRESS_FALLBACK = [
 
 const SCENARIO_CHART = {
   '2008_crash': [
-    { m: 'Sep', p: 100, n: 100 },{ m: 'Oct', p: 72, n: 68 },{ m: 'Nov', p: 63, n: 61 },
-    { m: 'Dec', p: 60, n: 57 },{ m: 'Jan', p: 59, n: 55 },{ m: 'Feb', p: 62, n: 58 },
-    { m: 'Mar', p: 66, n: 62 },{ m: 'Jun', p: 75, n: 70 },{ m: 'Dec', p: 90, n: 85 },
+    { m: 'Sep', p: 100, n: 100 }, { m: 'Oct', p: 72, n: 68 }, { m: 'Nov', p: 63, n: 61 },
+    { m: 'Dec', p: 60, n: 57 }, { m: 'Jan', p: 59, n: 55 }, { m: 'Feb', p: 62, n: 58 },
+    { m: 'Mar', p: 66, n: 62 }, { m: 'Jun', p: 75, n: 70 }, { m: 'Dec', p: 90, n: 85 },
   ],
   'covid_2020': [
-    { m: 'Feb', p: 100, n: 100 },{ m: 'Mar-1', p: 85, n: 82 },{ m: 'Mar-2', p: 72, n: 68 },
-    { m: 'Apr', p: 78, n: 74 },{ m: 'May', p: 87, n: 83 },{ m: 'Jun', p: 95, n: 90 },
+    { m: 'Feb', p: 100, n: 100 }, { m: 'Mar-1', p: 85, n: 82 }, { m: 'Mar-2', p: 72, n: 68 },
+    { m: 'Apr', p: 78, n: 74 }, { m: 'May', p: 87, n: 83 }, { m: 'Jun', p: 95, n: 90 },
   ],
   '2022_correction': [
-    { m: 'Jan', p: 100, n: 100 },{ m: 'Feb', p: 96, n: 95 },{ m: 'Mar', p: 92, n: 91 },
-    { m: 'Apr', p: 89, n: 88 },{ m: 'May', p: 86, n: 85 },{ m: 'Jun', p: 88, n: 87 },
+    { m: 'Jan', p: 100, n: 100 }, { m: 'Feb', p: 96, n: 95 }, { m: 'Mar', p: 92, n: 91 },
+    { m: 'Apr', p: 89, n: 88 }, { m: 'May', p: 86, n: 85 }, { m: 'Jun', p: 88, n: 87 },
   ],
 }
 
@@ -637,15 +633,14 @@ function StressTab({ data }) {
               key={sc.name}
               type="button"
               onClick={() => setActiveScenario(sc.name)}
-              className={`text-left p-5 rounded-xl border-2 transition-all cursor-pointer ${
-                isActive ? 'border-[#00D4FF]/50 bg-[#00D4FF]/5' : 'border-slate-800 bg-slate-900/30 hover:border-slate-700'
-              }`}
+              className={`text-left p-5 rounded-xl border-2 transition-all cursor-pointer ${isActive ? 'border-[#008080]/50 bg-[rgba(0,128,128,0.05)]' : 'border-[rgba(0,128,128,0.2)] bg-[rgba(13,43,43,0.3)] hover:border-[rgba(0,128,128,0.25)]'
+                }`}
             >
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-2xl">{meta.emoji}</span>
                 <div>
-                  <p className="text-sm font-bold text-white">{meta.label}</p>
-                  <p className="text-[10px] text-slate-500">{meta.period}</p>
+                  <p className="text-sm font-bold text-[#F4E1C1]">{meta.label}</p>
+                  <p className="text-[10px] text-[rgba(244,225,193,0.4)]">{meta.period}</p>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
@@ -654,8 +649,8 @@ function StressTab({ data }) {
                   ['Max Drawdown', pct(dd), 'text-red-400'],
                   ['Recovery', `${rec}mo`, 'text-amber-400'],
                 ].map(([label, val, cls]) => (
-                  <div key={label} className="bg-slate-900/60 rounded-lg p-2">
-                    <p className="text-[9px] text-slate-500 font-bold uppercase">{label}</p>
+                  <div key={label} className="bg-[rgba(13,43,43,0.5)] rounded-lg p-2">
+                    <p className="text-[9px] text-[rgba(244,225,193,0.4)] font-bold uppercase">{label}</p>
                     <p className={`font-black font-mono text-sm ${cls}`}>{val}</p>
                   </div>
                 ))}
@@ -666,11 +661,11 @@ function StressTab({ data }) {
       </div>
 
       {/* Scenario line chart */}
-      <Card className="bg-slate-900/30 border-slate-800/60">
-        <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">
+      <Card className="bg-[rgba(13,43,43,0.3)] border-[rgba(0,128,128,0.2)]/60">
+        <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)] mb-1">
           {SCENARIO_META[activeScenario]?.label || activeScenario} — Portfolio vs Nifty 50 (indexed to 100)
         </p>
-        <p className="text-[9px] text-slate-600 italic mb-4">
+        <p className="text-[9px] text-[rgba(244,225,193,0.3)] italic mb-4">
           Simulated based on your sector allocation and the historical Nifty performance during this period.
         </p>
         <div className="h-56">
@@ -681,7 +676,7 @@ function StressTab({ data }) {
               <YAxis domain={['auto', 'auto']} fontSize={10} stroke="#4b5563" tickFormatter={(v) => `${v}`} />
               <Tooltip {...TOOLTIP_STYLE} formatter={(v, n) => [`${v} (indexed)`, n]} />
               <ReferenceLine y={100} stroke="#4b5563" strokeDasharray="4 2" />
-              <Line type="monotone" dataKey="p" stroke="#00D4FF" strokeWidth={2.5} dot={false} name="Your Portfolio" />
+              <Line type="monotone" dataKey="p" stroke="#008080" strokeWidth={2.5} dot={false} name="Your Portfolio" />
               <Line type="monotone" dataKey="n" stroke="#4b5563" strokeWidth={1.5} dot={false} name="Nifty 50" strokeDasharray="4 2" />
               <Legend wrapperStyle={{ fontSize: 10 }} />
             </LineChart>
@@ -739,7 +734,7 @@ function WhatIfTab({ portfolioId }) {
             type="button"
             onClick={() => sendQuestion(q)}
             disabled={loading}
-            className="px-3 py-1.5 text-[11px] font-semibold rounded-full border border-slate-800 bg-slate-900/40 text-slate-400 hover:border-[#00D4FF]/40 hover:text-[#00D4FF] disabled:opacity-40 transition-all cursor-pointer"
+            className="px-3 py-1.5 text-[11px] font-semibold rounded-full border border-[rgba(0,128,128,0.2)] bg-[rgba(13,43,43,0.3)] text-[rgba(244,225,193,0.55)] hover:border-[#008080]/40 hover:text-[#008080] disabled:opacity-40 transition-all cursor-pointer"
           >
             {q}
           </button>
@@ -747,10 +742,10 @@ function WhatIfTab({ portfolioId }) {
       </div>
 
       {/* Chat window */}
-      <Card className="flex-1 overflow-y-auto space-y-3 bg-slate-900/20 border-slate-800/60 pr-1">
+      <Card className="flex-1 overflow-y-auto space-y-3 bg-[rgba(13,43,43,0.15)] border-[rgba(0,128,128,0.2)]/60 pr-1">
         {messages.length === 0 ? (
-          <div className="text-center text-slate-600 py-16 space-y-2">
-            <Zap className="mx-auto h-8 w-8 text-slate-700" />
+          <div className="text-center text-[rgba(244,225,193,0.3)] py-16 space-y-2">
+            <Zap className="mx-auto h-8 w-8 text-[rgba(244,225,193,0.25)]" />
             <p className="text-sm font-semibold">Ask anything about your portfolio</p>
             <p className="text-xs italic">Use the preset questions above or type your own below.</p>
           </div>
@@ -761,16 +756,15 @@ function WhatIfTab({ portfolioId }) {
               className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {msg.role === 'advisor' && (
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#00D4FF] to-[#7C3AED] flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Activity className="h-3.5 w-3.5 text-white" />
+                <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: '#008080' }}>
+                  <Activity className="h-3.5 w-3.5 text-[#F4E1C1]" />
                 </div>
               )}
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-[#00D4FF]/10 border border-[#00D4FF]/20 text-white rounded-tr-sm'
-                    : 'bg-slate-900/80 border border-slate-800 text-slate-300 rounded-tl-sm'
-                }`}
+                className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${msg.role === 'user'
+                    ? 'bg-[rgba(0,128,128,0.1)] border border-[rgba(0,128,128,0.2)] text-[#F4E1C1] rounded-tr-sm'
+                    : 'bg-[rgba(13,43,43,0.7)] border border-[rgba(0,128,128,0.2)] text-[rgba(244,225,193,0.75)] rounded-tl-sm'
+                  }`}
               >
                 {msg.text}
               </div>
@@ -779,13 +773,13 @@ function WhatIfTab({ portfolioId }) {
         )}
         {loading && (
           <div className="flex gap-3 justify-start">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#00D4FF] to-[#7C3AED] flex items-center justify-center flex-shrink-0">
-              <Activity className="h-3.5 w-3.5 text-white" />
+            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#008080' }}>
+              <Activity className="h-3.5 w-3.5 text-[#F4E1C1]" />
             </div>
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl rounded-tl-sm px-4 py-3">
+            <div className="bg-[rgba(13,43,43,0.7)] border border-[rgba(0,128,128,0.2)] rounded-2xl rounded-tl-sm px-4 py-3">
               <div className="flex gap-1">
-                {[0,1,2].map((i) => (
-                  <span key={i} className="w-1.5 h-1.5 bg-[#00D4FF] rounded-full animate-bounce"
+                {[0, 1, 2].map((i) => (
+                  <span key={i} className="w-1.5 h-1.5 bg-[#008080] rounded-full animate-bounce"
                     style={{ animationDelay: `${i * 150}ms` }} />
                 ))}
               </div>
@@ -806,12 +800,13 @@ function WhatIfTab({ portfolioId }) {
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask anything about this portfolio…"
           disabled={loading}
-          className="flex-1 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-white placeholder-slate-600 focus:border-[#00D4FF] focus:outline-none disabled:opacity-50"
+          className="flex-1 rounded-xl border border-[rgba(0,128,128,0.2)] bg-[rgba(13,43,43,0.5)] px-4 py-3 text-sm text-[#F4E1C1] placeholder-[rgba(244,225,193,0.3)] focus:border-[#008080] focus:outline-none disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={loading || !input.trim()}
-          className="p-3 rounded-xl bg-gradient-to-r from-[#00D4FF] to-[#7C3AED] text-[#0A0E1A] disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-[0_0_16px_rgba(0,212,255,0.3)] transition-all cursor-pointer"
+          className="p-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-[0_0_16px_rgba(0,128,128,0.3)] transition-all cursor-pointer text-[#F4E1C1]"
+          style={{ background: '#008080' }}
         >
           {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
         </button>
@@ -837,10 +832,10 @@ function PollingScreen({ progress }) {
 
   const msg =
     progress <= 5 ? 'Extracting constraints…'
-    : progress < 45 ? 'Downloading OHLCV & computing indicators…'
-    : progress < 70 ? 'Running XGBoost forecasts…'
-    : progress < 90 ? 'Solving mean-variance optimizer…'
-    : 'Generating risk critique & SHAP…'
+      : progress < 45 ? 'Downloading OHLCV & computing indicators…'
+        : progress < 70 ? 'Running XGBoost forecasts…'
+          : progress < 90 ? 'Solving mean-variance optimizer…'
+            : 'Generating risk critique & SHAP…'
 
   return (
     <div className="max-w-sm mx-auto py-20 px-4 text-center space-y-8">
@@ -857,18 +852,18 @@ function PollingScreen({ progress }) {
           />
           <defs>
             <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#00D4FF" /><stop offset="100%" stopColor="#7C3AED" />
+              <stop offset="0%" stopColor="#008080" /><stop offset="100%" stopColor="#9a6e3a" />
             </linearGradient>
           </defs>
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-black text-white font-mono">{progress}%</span>
+          <span className="text-2xl font-black text-[#F4E1C1] font-mono">{progress}%</span>
         </div>
       </div>
 
       <div>
-        <h3 className="text-xl font-black text-white">Building Your Portfolio</h3>
-        <p className="text-sm text-slate-400 mt-1">{msg}</p>
+        <h3 className="text-xl font-black text-[#F4E1C1]">Building Your Portfolio</h3>
+        <p className="text-sm text-[rgba(244,225,193,0.55)] mt-1">{msg}</p>
       </div>
 
       <div className="space-y-2.5 text-left">
@@ -877,19 +872,18 @@ function PollingScreen({ progress }) {
           const isActive = !done && i === active
           return (
             <div key={i} className={`flex items-center gap-3 text-sm transition-all ${done ? 'opacity-100' : isActive ? 'opacity-100' : 'opacity-30'}`}>
-              <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                done ? 'bg-emerald-500 border-emerald-500' : isActive ? 'border-[#00D4FF] bg-[#00D4FF]/10' : 'border-slate-800'
-              }`}>
-                {done ? <Check className="h-3 w-3 text-white stroke-[3]" /> : isActive ? <span className="w-1.5 h-1.5 bg-[#00D4FF] rounded-full animate-pulse" /> : null}
+              <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${done ? 'bg-emerald-500 border-emerald-500' : isActive ? 'border-[#008080] bg-[rgba(0,128,128,0.1)]' : 'border-[rgba(0,128,128,0.2)]'
+                }`}>
+                {done ? <Check className="h-3 w-3 text-white stroke-[3]" /> : isActive ? <span className="w-1.5 h-1.5 bg-[#008080] rounded-full animate-pulse" /> : null}
               </span>
-              <span className={done ? 'text-emerald-400 line-through decoration-emerald-700' : isActive ? 'text-white font-bold' : 'text-slate-600'}>
+              <span className={done ? 'text-emerald-400 line-through decoration-emerald-700' : isActive ? 'text-[#F4E1C1] font-bold' : 'text-[rgba(244,225,193,0.3)]'}>
                 {s.label}
               </span>
             </div>
           )
         })}
       </div>
-      <p className="text-[10px] text-slate-600 italic">Don't close this tab · Usually 30–60 seconds</p>
+      <p className="text-[10px] text-[rgba(244,225,193,0.3)] italic">Don't close this tab · Usually 30–60 seconds</p>
     </div>
   )
 }
@@ -944,7 +938,7 @@ export default function ResultPage() {
     if (!statePortfolio && portfolioId && !portfolioData && !polling) {
       api.get(`/api/v1/analysis/portfolio/${portfolioId}`)
         .then(({ data }) => setPortfolioData(data))
-        .catch(() => {})
+        .catch(() => { })
     }
   }, [portfolioId, statePortfolio, portfolioData, polling])
 
@@ -972,11 +966,11 @@ export default function ResultPage() {
       <div className="max-w-md mx-auto py-16 px-4">
         <Card className="border-red-950 bg-red-950/10 text-center space-y-4">
           <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
-          <h2 className="text-xl font-bold text-white">Optimization Failed</h2>
+          <h2 className="text-xl font-bold text-[#F4E1C1]">Optimization Failed</h2>
           <p className="text-xs text-red-300 bg-slate-950/60 p-3 rounded-lg border border-slate-900 leading-relaxed font-mono">{error}</p>
           <div className="flex justify-center gap-3">
-            <Link to="/analyze"><button type="button" className="px-4 py-2 rounded-lg bg-[#00D4FF] text-[#0A0E1A] text-sm font-bold cursor-pointer">New Goal</button></Link>
-            <Link to="/dashboard"><button type="button" className="px-4 py-2 rounded-lg border border-slate-800 text-slate-300 text-sm font-bold cursor-pointer">Dashboard</button></Link>
+            <Link to="/analyze"><button type="button" className="px-4 py-2 rounded-lg text-sm font-bold cursor-pointer text-[#F4E1C1]" style={{ background: '#008080' }}>New Goal</button></Link>
+            <Link to="/dashboard"><button type="button" className="px-4 py-2 rounded-lg border border-[rgba(0,128,128,0.2)] text-[rgba(244,225,193,0.75)] text-sm font-bold cursor-pointer">Dashboard</button></Link>
           </div>
         </Card>
       </div>
@@ -994,31 +988,31 @@ export default function ResultPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <Link to="/dashboard" className="text-xs text-[#00D4FF] hover:underline flex items-center gap-1 mb-1 font-medium">
+          <Link to="/dashboard" className="text-xs text-[#008080] hover:underline flex items-center gap-1 mb-1 font-medium">
             <ArrowLeft className="h-3 w-3" /> Back to Dashboard
           </Link>
-          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-2">
-            <BarChart2 className="h-7 w-7 text-[#00D4FF]" />
+          <h1 className="text-3xl font-black text-[#F4E1C1] tracking-tight flex items-center gap-2">
+            <BarChart2 className="h-7 w-7 text-[#008080]" />
             {p.name || 'Portfolio Results'}
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-[rgba(244,225,193,0.55)] mt-1">
             <span className="capitalize">{p.risk_level}</span> risk ·{' '}
             {fmtINR(p.amount)} invested ·{' '}
-            <span className="font-mono text-xs text-slate-500">{pid}</span>
+            <span className="font-mono text-xs text-[rgba(244,225,193,0.4)]">{pid}</span>
           </p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <button
             type="button"
             onClick={handleDownload}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-semibold transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[rgba(0,128,128,0.2)] text-[rgba(244,225,193,0.55)] hover:text-[#F4E1C1] hover:bg-[rgba(0,128,128,0.08)] text-xs font-semibold transition-all cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" /> Download JSON
           </button>
           <button
             type="button"
             onClick={handleShare}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#00D4FF]/10 border border-[#00D4FF]/20 text-[#00D4FF] hover:bg-[#00D4FF]/20 text-xs font-semibold transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[rgba(0,128,128,0.1)] border border-[rgba(0,128,128,0.2)] text-[#008080] hover:bg-[rgba(0,128,128,0.2)] text-xs font-semibold transition-all cursor-pointer"
           >
             <Share2 className="h-3.5 w-3.5" /> Share
           </button>
@@ -1030,11 +1024,11 @@ export default function ResultPage() {
 
       {/* Tab content */}
       <div key={activeTab} style={{ animation: 'fadeIn 0.2s ease-out' }}>
-        {activeTab === 'Overview'      && <OverviewTab data={portfolioData} />}
-        {activeTab === 'Holdings'      && <HoldingsTab data={portfolioData} />}
+        {activeTab === 'Overview' && <OverviewTab data={portfolioData} />}
+        {activeTab === 'Holdings' && <HoldingsTab data={portfolioData} />}
         {activeTab === 'Risk Analysis' && <RiskTab data={portfolioData} />}
-        {activeTab === 'Stress Test'   && <StressTab data={portfolioData} />}
-        {activeTab === 'What-If'       && <WhatIfTab portfolioId={pid} />}
+        {activeTab === 'Stress Test' && <StressTab data={portfolioData} />}
+        {activeTab === 'What-If' && <WhatIfTab portfolioId={portfolioId} />}
       </div>
 
       <style>{`

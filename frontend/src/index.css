@@ -1,22 +1,129 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
-@theme {
-  --color-bg-app: #0A0E1A;
-  --color-surface-app: #111827;
-  --color-accent-app: #00D4FF;
-  --color-accent2-app: #7C3AED;
-  --color-success-app: #10B981;
-  --color-danger-app: #EF4444;
-  --color-text-primary: #F9FAFB;
-  --color-text-muted: #6B7280;
-  
-  --font-sans: "Inter", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+@layer base {
+  :root {
+    --cream:   #F4E1C1;
+    --teal:    #008080;
+    --teal-2:  #006666;
+    --teal-3:  #004d4d;
+    --teal-lt: #00a0a0;
+    --sand:    #e8d0a8;
+    --ink:     #0d2b2b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: #F4E1C1;
+    color: #0d2b2b;
+    font-family: 'Space Grotesk', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 { font-family: 'Syne', sans-serif; }
+  code, pre, .mono { font-family: 'Space Mono', monospace; }
+  ::selection { background: rgba(0,128,128,0.2); color: #0d2b2b; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #F4E1C1; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,128,128,0.35); border-radius: 2px; }
 }
 
-body {
-  background-color: #0A0E1A;
-  color: #F9FAFB;
-  font-family: "Inter", sans-serif;
+@layer utilities {
+  .glass {
+    background: rgba(244,225,193,0.55);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(0,128,128,0.15);
+  }
+  .glass-teal {
+    background: rgba(0,128,128,0.08);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(0,128,128,0.2);
+  }
+  .clay-cream {
+    background: rgba(244,225,193,0.7);
+    border-radius: 24px;
+    box-shadow: 6px 6px 18px rgba(0,80,80,0.14), -3px -3px 10px rgba(255,255,255,0.7), inset 1px 1px 4px rgba(255,255,255,0.5);
+    border: 1px solid rgba(0,128,128,0.12);
+  }
+  .glow-teal { box-shadow: 0 0 28px rgba(0,128,128,0.28), 0 0 60px rgba(0,128,128,0.10); }
+  .grad-teal {
+    background: linear-gradient(135deg, #008080, #00c8c8);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .grad-sand {
+    background: linear-gradient(135deg, #c49a60, #e8d0a8);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 999px;
+    border: 1px solid rgba(0,128,128,0.3);
+    color: #008080; background: rgba(0,128,128,0.08);
+  }
+  .bg-section-dark {
+    background: linear-gradient(180deg, #112f2f 0%, #0d2b2b 18%, #0d2b2b 82%, #112f2f 100%);
+    color: #F4E1C1;
+  }
+  .swiss-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,128,128,0.3), transparent);
+  }
+  .halftone::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, rgba(0,128,128,0.18) 1px, transparent 1px);
+    background-size: 22px 22px;
+    pointer-events: none; z-index: 0;
+  }
+}
+
+/* ═══ Keyframes ═══ */
+@keyframes float        { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes pulse-dot    { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes pulse-glow   { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+@keyframes spin-slow    { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes spin-rev     { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+@keyframes ticker       { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes fadeInUp     { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInLeft   { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes fadeInRight  { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes ripple       { 0% { transform: scale(0.8); opacity: 0.7; } 100% { transform: scale(2.4); opacity: 0; } }
+@keyframes shimmer      { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+@keyframes drift        { 0%,100% { transform: translateY(0) translateX(0); opacity:0.4; } 33% { transform: translateY(-18px) translateX(8px); opacity:0.7; } 66% { transform: translateY(8px) translateX(-6px); opacity:0.5; } }
+@keyframes glowPulse    { 0%,100% { box-shadow: 0 0 20px rgba(0,128,128,0.2); } 50% { box-shadow: 0 0 40px rgba(0,128,128,0.45); } }
+@keyframes bounce-y     { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+.animate-float          { animation: float 5s ease-in-out infinite; }
+.animate-pulse-glow     { animation: pulse-glow 3s ease-in-out infinite; }
+.animate-spin-slow      { animation: spin-slow 22s linear infinite; }
+.animate-spin-rev       { animation: spin-rev 18s linear infinite; }
+.animate-ticker         { animation: ticker 32s linear infinite; }
+.animate-fade-up        { animation: fadeInUp 0.6s ease forwards; }
+.animate-fade-left      { animation: fadeInLeft 0.6s ease forwards; }
+.animate-fade-right     { animation: fadeInRight 0.6s ease forwards; }
+.animate-drift          { animation: drift 8s ease-in-out infinite; }
+.animate-glow-pulse     { animation: glowPulse 3s ease-in-out infinite; }
+.animate-spin-very-slow { animation: spin-slow 40s linear infinite; }
+.animate-bounce-y       { animation: bounce-y 1.2s ease-in-out infinite; }
+.marquee-track:hover    { animation-play-state: paused; }
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-600 { animation-delay: 0.6s; }
+.delay-800 { animation-delay: 0.8s; }
+
+.ripple { position: relative; }
+.ripple::after {
+  content: '';
+  position: absolute; inset: -4px; border-radius: 50%;
+  border: 2px solid #008080;
+  animation: ripple 1.8s ease-out infinite;
 }

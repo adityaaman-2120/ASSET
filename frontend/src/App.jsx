@@ -1,10 +1,9 @@
 import React from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 
-// Import Pages
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -17,18 +16,30 @@ import QuestionnaireResultPage from './pages/QuestionnaireResultPage'
 import PortfolioDetailPage from './pages/PortfolioDetailPage'
 
 export default function App() {
+  const { pathname } = useLocation()
+  const isLanding = pathname === '/'
+  const isAuth = pathname.startsWith('/auth/')
+
+  // Cream background + ink text everywhere
+  const bgStyle = { background: '#F4E1C1', color: '#0d2b2b' }
+
+  // Auth pages and landing render their own full-screen layout; app pages get centered wrapper
+  const mainClass = isLanding || isAuth
+    ? 'flex-1'
+    : 'flex-1 mx-auto max-w-6xl w-full px-6 py-8'
+
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-[#F9FAFB] flex flex-col">
+    <div className="min-h-screen flex flex-col" style={bgStyle}>
       <Navbar />
-      <main className="flex-1 mx-auto max-w-6xl w-full px-6 py-8">
+      <main className={mainClass}>
         <ErrorBoundary>
           <Routes>
-            {/* Public routes */}
+            {/* Public */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/auth/register" element={<RegisterPage />} />
 
-            {/* Protected routes */}
+            {/* Protected */}
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/analyze" element={<AnalyzePage />} />

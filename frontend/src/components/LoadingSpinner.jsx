@@ -10,10 +10,11 @@ export default function LoadingSpinner({ size = 'md', message = 'Loading...' }) 
   return (
     <div className="flex flex-col items-center justify-center space-y-4 py-8">
       <div
-        className={`animate-spin rounded-full border-t-[#00D4FF] border-r-transparent border-b-[#00D4FF] border-l-transparent ${sizeClasses[size]}`}
+        className={`animate-spin rounded-full border-t-[#008080] border-r-transparent border-b-[#008080] border-l-transparent ${sizeClasses[size]}`}
+        style={{ borderTopColor: '#008080', borderBottomColor: 'rgba(0,128,128,0.15)' }}
       />
       {message && (
-        <p className="text-sm font-medium text-slate-400 animate-pulse">{message}</p>
+        <p className="text-sm font-medium text-[rgba(13,43,43,0.6)] animate-pulse">{message}</p>
       )}
     </div>
   )

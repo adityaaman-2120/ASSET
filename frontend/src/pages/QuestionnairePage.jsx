@@ -129,18 +129,18 @@ function SingleCard({ icon, label, selected, onClick }) {
       onClick={onClick}
       className={`group w-full text-left p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer flex items-center gap-4 ${
         selected
-          ? 'border-[#00D4FF] bg-[#00D4FF]/8 shadow-[0_0_16px_rgba(0,212,255,0.12)]'
-          : 'border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/60'
+          ? 'border-[#008080] bg-[rgba(0,128,128,0.08)] shadow-[0_0_16px_rgba(0,128,128,0.12)]'
+          : 'border-[rgba(0,128,128,0.2)] bg-[rgba(244,225,193,0.65)] hover:border-[rgba(0,128,128,0.4)] hover:bg-[rgba(0,128,128,0.06)]'
       }`}
     >
       <span className="text-2xl flex-shrink-0 w-9 text-center">{icon}</span>
-      <span className={`text-sm font-semibold flex-1 leading-snug ${selected ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>
+      <span className={`text-sm font-semibold flex-1 leading-snug ${selected ? 'text-[#0d2b2b]' : 'text-[rgba(13,43,43,0.7)] group-hover:text-[#0d2b2b]'}`}>
         {label}
       </span>
       <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-        selected ? 'border-[#00D4FF] bg-[#00D4FF]' : 'border-slate-700 group-hover:border-slate-500'
+        selected ? 'border-[#008080] bg-[#008080]' : 'border-[rgba(0,128,128,0.3)] group-hover:border-[#008080]'
       }`}>
-        {selected && <Check className="h-3 w-3 text-[#0A0E1A] stroke-[3]" />}
+        {selected && <Check className="h-3 w-3 text-[#F4E1C1] stroke-[3]" />}
       </span>
     </button>
   )
@@ -153,18 +153,18 @@ function MultiCard({ icon, label, selected, onClick }) {
       onClick={onClick}
       className={`group text-left p-3.5 rounded-xl border-2 transition-all duration-200 cursor-pointer flex items-center gap-3 ${
         selected
-          ? 'border-[#00D4FF] bg-[#00D4FF]/8'
-          : 'border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/60'
+          ? 'border-[#008080] bg-[rgba(0,128,128,0.08)]'
+          : 'border-[rgba(0,128,128,0.2)] bg-[rgba(244,225,193,0.65)] hover:border-[rgba(0,128,128,0.4)] hover:bg-[rgba(0,128,128,0.06)]'
       }`}
     >
       <span className="text-xl flex-shrink-0">{icon}</span>
-      <span className={`text-xs font-semibold flex-1 ${selected ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>
+      <span className={`text-xs font-semibold flex-1 ${selected ? 'text-[#0d2b2b]' : 'text-[rgba(13,43,43,0.7)] group-hover:text-[#0d2b2b]'}`}>
         {label}
       </span>
       <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-        selected ? 'border-[#00D4FF] bg-[#00D4FF]' : 'border-slate-700'
+        selected ? 'border-[#008080] bg-[#008080]' : 'border-[rgba(0,128,128,0.3)]'
       }`}>
-        {selected && <Check className="h-2.5 w-2.5 text-[#0A0E1A] stroke-[3]" />}
+        {selected && <Check className="h-2.5 w-2.5 text-[#F4E1C1] stroke-[3]" />}
       </span>
     </button>
   )
@@ -174,14 +174,14 @@ function SectorCard({ icon, label, selected, variant, onClick }) {
   const colors = {
     prefer: selected
       ? 'border-emerald-500 bg-emerald-500/10'
-      : 'border-slate-800 bg-slate-900/30 hover:border-emerald-700 hover:bg-slate-900/60',
+      : 'border-[rgba(0,128,128,0.2)] bg-[rgba(244,225,193,0.65)] hover:border-emerald-700 hover:bg-[rgba(0,128,128,0.06)]',
     avoid: selected
       ? 'border-red-500 bg-red-500/10'
-      : 'border-slate-800 bg-slate-900/30 hover:border-red-700 hover:bg-slate-900/60',
+      : 'border-[rgba(0,128,128,0.2)] bg-[rgba(244,225,193,0.65)] hover:border-red-700 hover:bg-[rgba(0,128,128,0.06)]',
   }
   const checkColors = {
-    prefer: selected ? 'border-emerald-500 bg-emerald-500' : 'border-slate-700',
-    avoid: selected ? 'border-red-500 bg-red-500' : 'border-slate-700',
+    prefer: selected ? 'border-emerald-500 bg-emerald-500' : 'border-[rgba(0,128,128,0.3)]',
+    avoid: selected ? 'border-red-500 bg-red-500' : 'border-[rgba(0,128,128,0.3)]',
   }
   return (
     <button
@@ -190,11 +190,11 @@ function SectorCard({ icon, label, selected, variant, onClick }) {
       className={`group text-left p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer flex items-center gap-2.5 ${colors[variant]}`}
     >
       <span className="text-base flex-shrink-0">{icon}</span>
-      <span className={`text-xs font-semibold flex-1 leading-tight ${selected ? 'text-white' : 'text-slate-400 group-hover:text-white'}`}>
+      <span className={`text-xs font-semibold flex-1 leading-tight ${selected ? 'text-[#0d2b2b]' : 'text-[rgba(13,43,43,0.5)] group-hover:text-[#0d2b2b]'}`}>
         {label}
       </span>
       <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${checkColors[variant]}`}>
-        {selected && <Check className="h-2.5 w-2.5 text-[#0A0E1A] stroke-[3]" />}
+        {selected && <Check className="h-2.5 w-2.5 text-[#F4E1C1] stroke-[3]" />}
       </span>
     </button>
   )
@@ -248,14 +248,14 @@ function PipelineScreen({ portfolioId, onComplete, onError }) {
   }, [poll])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A0E1A]/95 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(244,225,193,0.98)] backdrop-blur-md">
       <div className="w-full max-w-sm px-8 space-y-8 text-center">
 
         {/* Animated orb */}
         <div className="relative mx-auto w-28 h-28">
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#00D4FF]/10 to-[#7C3AED]/10 animate-pulse" />
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[rgba(0,128,128,0.1)] to-[rgba(154,110,58,0.1)] animate-pulse" />
           <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="44" fill="none" stroke="#1f2937" strokeWidth="4" />
+            <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(0,128,128,0.12)" strokeWidth="4" />
             <circle
               cx="50" cy="50" r="44"
               fill="none"
@@ -268,21 +268,21 @@ function PipelineScreen({ portfolioId, onComplete, onError }) {
             />
             <defs>
               <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#00D4FF" />
-                <stop offset="100%" stopColor="#7C3AED" />
+                <stop offset="0%" stopColor="#008080" />
+                <stop offset="100%" stopColor="#9a6e3a" />
               </linearGradient>
             </defs>
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-black text-white font-mono">{progress}%</span>
+            <span className="text-2xl font-black text-[#0d2b2b] font-mono">{progress}%</span>
           </div>
         </div>
 
         <div>
-          <h3 className="text-xl font-black text-white">Building Your Portfolio</h3>
-          <p className="text-sm text-slate-400 mt-1">
+          <h3 className="text-xl font-black text-[#0d2b2b]">Building Your Portfolio</h3>
+          <p className="text-sm text-[rgba(13,43,43,0.5)] mt-1">
             Running quant pipeline ·{' '}
-            <span className="font-mono text-[#00D4FF]">{elapsed}s elapsed</span>
+            <span className="font-mono text-[#008080]">{elapsed}s elapsed</span>
           </p>
         </div>
 
@@ -304,20 +304,20 @@ function PipelineScreen({ portfolioId, onComplete, onError }) {
                   done
                     ? 'bg-emerald-500 border-emerald-500'
                     : active
-                    ? 'border-[#00D4FF] bg-[#00D4FF]/10'
-                    : 'border-slate-800 bg-slate-900'
+                    ? 'border-[#008080] bg-[rgba(0,128,128,0.1)]'
+                    : 'border-[rgba(0,128,128,0.2)] bg-[rgba(0,128,128,0.06)]'
                 }`}>
                   {done ? (
                     <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
                   ) : active ? (
-                    <span className="w-2 h-2 rounded-full bg-[#00D4FF] animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-[#008080] animate-pulse" />
                   ) : null}
                 </span>
 
                 <span className={
                   done ? 'text-emerald-400 font-semibold line-through decoration-emerald-700'
-                  : active ? 'text-white font-bold'
-                  : 'text-slate-600'
+                  : active ? 'text-[#0d2b2b] font-bold'
+                  : 'text-[rgba(13,43,43,0.35)]'
                 }>
                   {step.label}
                 </span>
@@ -326,7 +326,7 @@ function PipelineScreen({ portfolioId, onComplete, onError }) {
                   <span className="ml-auto text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Done</span>
                 )}
                 {active && (
-                  <span className="ml-auto text-[10px] text-[#00D4FF] font-bold uppercase tracking-wider animate-pulse">
+                  <span className="ml-auto text-[10px] text-[#008080] font-bold uppercase tracking-wider animate-pulse">
                     Running…
                   </span>
                 )}
@@ -335,7 +335,7 @@ function PipelineScreen({ portfolioId, onComplete, onError }) {
           })}
         </div>
 
-        <p className="text-[10px] text-slate-600 italic">
+        <p className="text-[10px] text-[rgba(13,43,43,0.35)] italic">
           Don't close this tab · Usually 30–60 seconds
         </p>
       </div>
@@ -351,7 +351,7 @@ function AnswerSummary({ questions, answers, currentStep }) {
 
   return (
     <div className="hidden lg:block w-56 flex-shrink-0 space-y-2">
-      <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-3">Your Answers</p>
+      <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(13,43,43,0.5)] mb-3">Your Answers</p>
       {answered.map((q) => {
         const val = answers[q.id]
         let display = ''
@@ -363,9 +363,9 @@ function AnswerSummary({ questions, answers, currentStep }) {
           display = [p && `✓ ${p}`, a && `✗ ${a}`].filter(Boolean).join(' · ') || 'Skipped'
         }
         return (
-          <div key={q.id} className="p-2.5 rounded-lg bg-slate-900/40 border border-slate-800">
-            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider truncate">{q.id.replace('_', ' ')}</p>
-            <p className="text-[10px] text-slate-300 mt-0.5 leading-tight line-clamp-2">{display}</p>
+          <div key={q.id} className="p-2.5 rounded-lg bg-[rgba(244,225,193,0.65)] border border-[rgba(0,128,128,0.2)]">
+            <p className="text-[9px] text-[rgba(13,43,43,0.5)] font-bold uppercase tracking-wider truncate">{q.id.replace('_', ' ')}</p>
+            <p className="text-[10px] text-[rgba(13,43,43,0.7)] mt-0.5 leading-tight line-clamp-2">{display}</p>
           </div>
         )
       })}
@@ -472,25 +472,25 @@ export default function QuestionnairePage() {
 
   if (phase === 'submitting') {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A0E1A]/95 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(244,225,193,0.96)] backdrop-blur-md">
         <div className="text-center space-y-6 max-w-xs px-6">
           <div className="relative mx-auto w-20 h-20">
             <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="44" fill="none" stroke="#1f2937" strokeWidth="4" />
+              <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(0,128,128,0.12)" strokeWidth="4" />
               <circle
                 cx="50" cy="50" r="44" fill="none"
-                stroke="#00D4FF" strokeWidth="4" strokeLinecap="round"
+                stroke="#008080" strokeWidth="4" strokeLinecap="round"
                 strokeDasharray="276.46" strokeDashoffset="100"
                 style={{ animation: 'dash 1.5s ease-in-out infinite' }}
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <Sparkles className="h-8 w-8 text-[#00D4FF] animate-pulse" />
+              <Sparkles className="h-8 w-8 text-[#008080] animate-pulse" />
             </div>
           </div>
           <div>
-            <h3 className="text-lg font-black text-white">Mapping Your Profile</h3>
-            <p className="text-sm text-slate-400 mt-1">Submitting answers and starting portfolio construction…</p>
+            <h3 className="text-lg font-black text-[#0d2b2b]">Mapping Your Profile</h3>
+            <p className="text-sm text-[rgba(13,43,43,0.5)] mt-1">Submitting answers and starting portfolio construction…</p>
           </div>
           <style>{`
             @keyframes dash {
@@ -524,21 +524,21 @@ export default function QuestionnairePage() {
       {/* ── Progress header ── */}
       <div className="mb-8 space-y-3">
         <div className="flex items-center justify-between text-xs font-bold">
-          <span className="flex items-center gap-2 text-slate-400">
-            <ClipboardList className="h-4 w-4 text-[#00D4FF]" />
+          <span className="flex items-center gap-2 text-[rgba(13,43,43,0.5)]">
+            <ClipboardList className="h-4 w-4 text-[#008080]" />
             <span className="uppercase tracking-wider">Risk Profiler</span>
           </span>
-          <span className="font-mono text-[#00D4FF]">
-            {step + 1} <span className="text-slate-600">/ {QUESTIONS.length}</span>
+          <span className="font-mono text-[#008080]">
+            {step + 1} <span className="text-[rgba(13,43,43,0.35)]">/ {QUESTIONS.length}</span>
           </span>
         </div>
 
         {/* Progress bar with step dots */}
         <div className="relative">
-          <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-[rgba(0,128,128,0.12)] rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#00D4FF] to-[#7C3AED] transition-all duration-500 ease-out"
-              style={{ width: `${Math.max(4, ((step + 1) / QUESTIONS.length) * 100)}%` }}
+              className="h-full transition-all duration-500 ease-out"
+              style={{ width: `${Math.max(4, ((step + 1) / QUESTIONS.length) * 100)}%`, background: 'linear-gradient(to right, #008080, #9a6e3a)' }}
             />
           </div>
           {/* Step dots */}
@@ -550,10 +550,10 @@ export default function QuestionnairePage() {
                 onClick={() => { if (i < step || (i === step)) return; if (i <= step) setStep(i) }}
                 className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-300 flex-shrink-0 ${
                   i < step
-                    ? 'bg-[#00D4FF] border-[#00D4FF] cursor-pointer hover:scale-110'
+                    ? 'bg-[#008080] border-[#008080] cursor-pointer hover:scale-110'
                     : i === step
-                    ? 'bg-[#7C3AED] border-[#7C3AED] scale-125'
-                    : 'bg-slate-900 border-slate-700'
+                    ? 'bg-[#9a6e3a] border-[#9a6e3a] scale-125'
+                    : 'bg-[rgba(0,128,128,0.12)] border-[rgba(0,128,128,0.3)]'
                 }`}
               />
             ))}
@@ -569,19 +569,19 @@ export default function QuestionnairePage() {
         <div className="flex-1 min-w-0" ref={cardRef}>
           <div
             key={step}
-            className="bg-[#111827] border border-slate-800/80 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden"
+            className="bg-[rgba(244,225,193,0.65)] border border-[rgba(0,128,128,0.2)] rounded-2xl shadow-2xl shadow-black/10 overflow-hidden"
             style={{ animation: 'slideIn 0.25s ease-out' }}
           >
             {/* Question header */}
-            <div className="px-6 pt-7 pb-5 border-b border-slate-800/60">
+            <div className="px-6 pt-7 pb-5 border-b border-[rgba(0,128,128,0.15)]">
               <div className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#00D4FF]/10 border border-[#00D4FF]/20 text-[#00D4FF] text-xs font-black flex items-center justify-center">
+                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[rgba(0,128,128,0.1)] border border-[rgba(0,128,128,0.2)] text-[#008080] text-xs font-black flex items-center justify-center">
                   {step + 1}
                 </span>
                 <div>
-                  <h2 className="text-xl font-black text-white leading-snug">{q.question}</h2>
+                  <h2 className="text-xl font-black text-[#0d2b2b] leading-snug">{q.question}</h2>
                   {q.subtitle && (
-                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">{q.subtitle}</p>
+                    <p className="text-xs text-[rgba(13,43,43,0.5)] mt-1 leading-relaxed">{q.subtitle}</p>
                   )}
                 </div>
               </div>
@@ -608,7 +608,7 @@ export default function QuestionnairePage() {
               {/* Multi choice */}
               {q.type === 'multi_choice' && (
                 <>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-3">
+                  <p className="text-[10px] text-[rgba(13,43,43,0.5)] font-bold uppercase tracking-wider mb-3">
                     Select all that apply
                   </p>
                   <div className="grid grid-cols-2 gap-2.5">
@@ -648,7 +648,7 @@ export default function QuestionnairePage() {
                       ))}
                     </div>
                   </div>
-                  <div className="border-t border-slate-800" />
+                  <div className="border-t border-[rgba(0,128,128,0.15)]" />
                   <div>
                     <div className="flex items-center gap-2 mb-2.5">
                       <Ban className="h-3.5 w-3.5 text-red-400" />
@@ -687,7 +687,7 @@ export default function QuestionnairePage() {
                 type="button"
                 onClick={goBack}
                 disabled={step === 0}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-[rgba(13,43,43,0.5)] hover:text-[#0d2b2b] hover:bg-[rgba(0,128,128,0.06)] disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 <ArrowLeft className="h-4 w-4" /> Back
               </button>
@@ -697,7 +697,7 @@ export default function QuestionnairePage() {
                   <span
                     key={i}
                     className={`w-1.5 h-1.5 rounded-full transition-all ${
-                      i === step ? 'bg-[#00D4FF] w-4' : i < step ? 'bg-slate-600' : 'bg-slate-800'
+                      i === step ? 'bg-[#008080] w-4' : i < step ? 'text-[rgba(13,43,43,0.35)] bg-[rgba(13,43,43,0.35)]' : 'bg-[rgba(0,128,128,0.12)]'
                     }`}
                   />
                 ))}
@@ -707,7 +707,8 @@ export default function QuestionnairePage() {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-[#00D4FF] to-[#7C3AED] text-[#0A0E1A] hover:shadow-[0_0_20px_rgba(0,212,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold hover:shadow-[0_0_20px_rgba(0,128,128,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                  style={{ background: '#008080', color: '#F4E1C1' }}
                 >
                   <Sparkles className="h-4 w-4" />
                   Analyze Now
@@ -717,7 +718,7 @@ export default function QuestionnairePage() {
                   type="button"
                   onClick={goNext}
                   disabled={q.type === 'single_choice' && !canProceed}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#0d2b2b] bg-[rgba(0,128,128,0.08)] hover:bg-[rgba(0,128,128,0.15)] border border-[rgba(0,128,128,0.2)] disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
                 >
                   {q.type === 'multi_choice' || q.type === 'multi_choice_with_avoid'
                     ? 'Continue'

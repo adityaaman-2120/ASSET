@@ -32,7 +32,7 @@ function SectorChip({ label, onRemove, variant = 'default' }) {
   const colors = {
     excluded: 'bg-red-950/50 border-red-500/30 text-red-300',
     preferred: 'bg-purple-950/50 border-purple-500/30 text-purple-300',
-    default: 'bg-slate-800 border-slate-700 text-slate-300',
+    default: 'bg-[rgba(0,128,128,0.08)] border-[rgba(0,128,128,0.2)] text-[#008080]',
   }
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold ${colors[variant]}`}>
@@ -41,7 +41,7 @@ function SectorChip({ label, onRemove, variant = 'default' }) {
         <button
           type="button"
           onClick={() => onRemove(label)}
-          className="hover:text-white transition-colors cursor-pointer ml-0.5"
+          className="hover:text-[#0d2b2b] transition-colors cursor-pointer ml-0.5"
         >
           <X className="h-3 w-3" />
         </button>
@@ -81,13 +81,13 @@ function SectorAdder({ existingChips, onAdd, placeholder }) {
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           placeholder={placeholder}
-          className="flex-1 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5 text-xs text-white placeholder-slate-600 focus:border-[#00D4FF] focus:outline-none"
+          className="flex-1 rounded-lg border border-[rgba(0,128,128,0.2)] bg-[rgba(244,225,193,0.5)] px-3 py-1.5 text-xs text-[#0d2b2b] placeholder-[rgba(13,43,43,0.35)] focus:border-[#008080] focus:outline-none"
         />
         <button
           type="button"
           onClick={() => submit()}
           disabled={!input.trim()}
-          className="px-3 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center gap-1"
+          className="px-3 py-1.5 rounded-lg text-xs bg-[rgba(0,128,128,0.08)] hover:bg-[rgba(0,128,128,0.06)] text-[rgba(13,43,43,0.7)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center gap-1 border border-[rgba(0,128,128,0.2)]"
         >
           <Plus className="h-3 w-3" /> Add
         </button>
@@ -95,13 +95,13 @@ function SectorAdder({ existingChips, onAdd, placeholder }) {
 
       {/* Dropdown suggestions */}
       {open && filtered.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-[#111827] border border-slate-800 rounded-lg shadow-xl overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-[rgba(244,225,193,0.65)] border border-[rgba(0,128,128,0.2)] rounded-lg shadow-xl overflow-hidden">
           {filtered.slice(0, 6).map((s) => (
             <button
               key={s}
               type="button"
               onMouseDown={() => submit(s)}
-              className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+              className="w-full text-left px-3 py-2 text-xs text-[rgba(13,43,43,0.7)] hover:bg-[rgba(0,128,128,0.06)] hover:text-[#0d2b2b] transition-colors cursor-pointer"
             >
               {s}
             </button>
@@ -138,27 +138,27 @@ function PipelineOverlay() {
   }, [])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A0E1A]/95 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(244,225,193,0.98)] backdrop-blur-md">
       <div className="w-full max-w-sm px-6 space-y-8 text-center">
         {/* Pulsing core icon */}
         <div className="relative mx-auto w-24 h-24">
-          <div className="absolute inset-0 rounded-full bg-[#00D4FF]/5 animate-ping" />
-          <div className="absolute inset-2 rounded-full border-2 border-[#00D4FF]/30 animate-pulse" />
+          <div className="absolute inset-0 rounded-full bg-[rgba(0,128,128,0.05)] animate-ping" />
+          <div className="absolute inset-2 rounded-full border-2 border-[rgba(0,128,128,0.3)] animate-pulse" />
           <div
-            className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#00D4FF] border-r-[#7C3AED]"
+            className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#008080] border-r-[#9a6e3a]"
             style={{ animation: 'spin 1.2s linear infinite' }}
           />
           <div className="absolute inset-0 flex items-center justify-center">
-            <Cpu className="h-9 w-9 text-[#00D4FF]" />
+            <Cpu className="h-9 w-9 text-[#008080]" />
           </div>
         </div>
 
         <div>
-          <h3 className="text-xl font-black text-white">Running Quant Pipeline</h3>
-          <p className="text-sm text-slate-400 mt-1 flex items-center justify-center gap-1.5">
+          <h3 className="text-xl font-black text-[#0d2b2b]">Running Quant Pipeline</h3>
+          <p className="text-sm text-[rgba(13,43,43,0.5)] mt-1 flex items-center justify-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
             Usually takes 30–60 seconds
-            <span className="font-mono text-[#00D4FF] ml-1">{elapsed}s</span>
+            <span className="font-mono text-[#008080] ml-1">{elapsed}s</span>
           </p>
         </div>
 
@@ -169,16 +169,16 @@ function PipelineOverlay() {
             const active = i === activeStep
             return (
               <div key={i} className={`flex items-center gap-3 text-xs transition-all duration-500 ${
-                done ? 'text-emerald-400' : active ? 'text-white' : 'text-slate-700'
+                done ? 'text-emerald-400' : active ? 'text-[#0d2b2b]' : 'text-[rgba(13,43,43,0.35)]'
               }`}>
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] transition-all ${
                   done
                     ? 'bg-emerald-500/20 border border-emerald-500/40'
                     : active
-                    ? 'bg-[#00D4FF]/10 border border-[#00D4FF]/40'
-                    : 'bg-slate-900 border border-slate-800'
+                    ? 'bg-[rgba(0,128,128,0.1)] border border-[rgba(0,128,128,0.4)]'
+                    : 'bg-[rgba(0,128,128,0.06)] border border-[rgba(0,128,128,0.2)]'
                 }`}>
-                  {done ? '✓' : active ? <Loader2 className="h-3 w-3 animate-spin text-[#00D4FF]" /> : i + 1}
+                  {done ? '✓' : active ? <Loader2 className="h-3 w-3 animate-spin text-[#008080]" /> : i + 1}
                 </span>
                 <span className={active ? 'font-semibold' : ''}>{s.icon} {s.label}</span>
               </div>
@@ -186,7 +186,7 @@ function PipelineOverlay() {
           })}
         </div>
 
-        <p className="text-[10px] text-slate-600 italic">
+        <p className="text-[10px] text-[rgba(13,43,43,0.35)] italic">
           Don't close this tab. You'll be redirected automatically when optimization completes.
         </p>
       </div>
@@ -268,24 +268,24 @@ export default function ConfirmPage() {
       <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
         {/* Header */}
         <div>
-          <Link to="/analyze" className="inline-flex items-center gap-1.5 text-xs text-[#00D4FF] hover:underline font-medium mb-3">
+          <Link to="/analyze" className="inline-flex items-center gap-1.5 text-xs text-[#008080] hover:underline font-medium mb-3">
             <ArrowLeft className="h-3 w-3" /> Back to Goal Input
           </Link>
-          <h1 className="text-3xl font-black text-white tracking-tight">
+          <h1 className="text-3xl font-black text-[#0d2b2b] tracking-tight">
             Confirm Your Strategy Brief
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-[rgba(13,43,43,0.5)] text-sm mt-1">
             Our AI has structured your goal. Review the extracted parameters below, then launch the quant optimizer.
           </p>
         </div>
 
         {/* AI extracted intent banner */}
         {brief.raw_intent && (
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-[#00D4FF]/5 border border-[#00D4FF]/15">
-            <Sparkles className="h-4 w-4 text-[#00D4FF] flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-[rgba(0,128,128,0.06)] border border-[rgba(0,128,128,0.15)]">
+            <Sparkles className="h-4 w-4 text-[#008080] flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-[#00D4FF]/70 mb-0.5">AI-Parsed Intent</p>
-              <p className="text-sm text-slate-300 italic">"{brief.raw_intent}"</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(0,128,128,0.7)] mb-0.5">AI-Parsed Intent</p>
+              <p className="text-sm text-[rgba(13,43,43,0.7)] italic">"{brief.raw_intent}"</p>
             </div>
           </div>
         )}
@@ -296,7 +296,7 @@ export default function ConfirmPage() {
           <div className="lg:col-span-2 space-y-5">
             <Card className="space-y-5">
               <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <h2 className="text-base font-bold text-[#0d2b2b] flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-emerald-400" />
                   Extracted Investment Profile
                 </h2>
@@ -305,8 +305,8 @@ export default function ConfirmPage() {
                   onClick={() => setEditing((v) => !v)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     editing
-                      ? 'bg-[#00D4FF]/10 text-[#00D4FF] border border-[#00D4FF]/30'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                      ? 'bg-[rgba(0,128,128,0.1)] text-[#008080] border border-[rgba(0,128,128,0.3)]'
+                      : 'bg-[rgba(0,128,128,0.06)] text-[rgba(13,43,43,0.5)] hover:text-[#0d2b2b] border border-[rgba(0,128,128,0.2)]'
                   }`}
                 >
                   <Edit3 className="h-3 w-3" />
@@ -317,36 +317,36 @@ export default function ConfirmPage() {
               {/* ── Amount ── */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="sm:col-span-1">
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-[rgba(13,43,43,0.5)] mb-1.5">
                     <Scale className="inline h-3 w-3 mr-1" />Investment Amount
                   </label>
                   {editing ? (
                     <div className="flex items-center gap-1.5">
-                      <span className="text-slate-400 text-sm">₹</span>
+                      <span className="text-[rgba(13,43,43,0.5)] text-sm">₹</span>
                       <input
                         type="number"
                         value={amount}
                         onChange={(e) => setAmount(Number(e.target.value))}
-                        className="w-full rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-[#00D4FF] focus:outline-none"
+                        className="w-full rounded-lg border border-[rgba(0,128,128,0.2)] bg-[rgba(244,225,193,0.5)] px-3 py-2 text-sm text-[#0d2b2b] focus:border-[#008080] focus:outline-none"
                         step={1000}
                         min={0}
                       />
                     </div>
                   ) : (
-                    <p className="text-xl font-black text-white font-mono">{fmtINR(amount)}</p>
+                    <p className="text-xl font-black text-[#0d2b2b] font-mono">{fmtINR(amount)}</p>
                   )}
                 </div>
 
                 {/* ── Risk Level ── */}
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-[rgba(13,43,43,0.5)] mb-1.5">
                     Risk Level
                   </label>
                   {editing ? (
                     <select
                       value={riskLevel}
                       onChange={(e) => setRiskLevel(e.target.value)}
-                      className="w-full rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-[#00D4FF] focus:outline-none capitalize"
+                      className="w-full rounded-lg border border-[rgba(0,128,128,0.2)] bg-[rgba(244,225,193,0.5)] px-3 py-2 text-sm text-[#0d2b2b] focus:border-[#008080] focus:outline-none capitalize"
                     >
                       {RISK_OPTIONS.map((r) => (
                         <option key={r} value={r} className="capitalize">{r.charAt(0).toUpperCase() + r.slice(1)}</option>
@@ -367,7 +367,7 @@ export default function ConfirmPage() {
 
                 {/* ── Horizon ── */}
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-[rgba(13,43,43,0.5)] mb-1.5">
                     <Clock className="inline h-3 w-3 mr-1" />Time Horizon
                   </label>
                   {editing ? (
@@ -377,26 +377,26 @@ export default function ConfirmPage() {
                         value={horizonYears}
                         onChange={(e) => setHorizonYears(Number(e.target.value))}
                         min={1} max={30}
-                        className="w-24 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-white focus:border-[#00D4FF] focus:outline-none"
+                        className="w-24 rounded-lg border border-[rgba(0,128,128,0.2)] bg-[rgba(244,225,193,0.5)] px-3 py-2 text-sm text-[#0d2b2b] focus:border-[#008080] focus:outline-none"
                       />
-                      <span className="text-slate-400 text-sm">years</span>
+                      <span className="text-[rgba(13,43,43,0.5)] text-sm">years</span>
                     </div>
                   ) : (
-                    <p className="text-xl font-black text-white">{horizonYears} <span className="text-sm font-normal text-slate-400">years</span></p>
+                    <p className="text-xl font-black text-[#0d2b2b]">{horizonYears} <span className="text-sm font-normal text-[rgba(13,43,43,0.5)]">years</span></p>
                   )}
                 </div>
               </div>
 
-              <div className="border-t border-slate-800" />
+              <div className="border-t border-[rgba(0,128,128,0.15)]" />
 
               {/* ── Excluded Sectors ── */}
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-[rgba(13,43,43,0.5)] mb-2">
                   <Ban className="inline h-3 w-3 mr-1 text-red-400" />Excluded Sectors
                 </label>
                 <div className="flex flex-wrap gap-1.5 min-h-[28px]">
                   {excludedSectors.length === 0 ? (
-                    <span className="text-xs text-slate-600 italic">None excluded</span>
+                    <span className="text-xs text-[rgba(13,43,43,0.35)] italic">None excluded</span>
                   ) : (
                     excludedSectors.map((s) => (
                       <SectorChip
@@ -421,12 +421,12 @@ export default function ConfirmPage() {
 
               {/* ── Preferred Sectors ── */}
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-[rgba(13,43,43,0.5)] mb-2">
                   <Star className="inline h-3 w-3 mr-1 text-purple-400" />Preferred Sectors
                 </label>
                 <div className="flex flex-wrap gap-1.5 min-h-[28px]">
                   {preferredSectors.length === 0 ? (
-                    <span className="text-xs text-slate-600 italic">None specified</span>
+                    <span className="text-xs text-[rgba(13,43,43,0.35)] italic">None specified</span>
                   ) : (
                     preferredSectors.map((s) => (
                       <SectorChip
@@ -454,26 +454,26 @@ export default function ConfirmPage() {
           {/* ── Right: Optimizer constraints + confirm ── */}
           <div className="space-y-4">
             {/* Optimizer rules card */}
-            <Card className="space-y-4 border-slate-800/60 bg-slate-950/40">
-              <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <ListFilter className="h-4 w-4 text-[#00D4FF]" />
+            <Card className="space-y-4 border-[rgba(0,128,128,0.2)] bg-[rgba(244,225,193,0.65)]">
+              <h3 className="text-sm font-bold text-[#0d2b2b] flex items-center gap-1.5">
+                <ListFilter className="h-4 w-4 text-[#008080]" />
                 Optimizer Constraints
               </h3>
               <div className="space-y-2.5 text-xs">
-                <div className="flex justify-between items-center py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Max single-stock weight</span>
-                  <span className="font-mono font-black text-white">{currentRules.max_weight}</span>
+                <div className="flex justify-between items-center py-1.5 border-b border-[rgba(0,128,128,0.15)]">
+                  <span className="text-[rgba(13,43,43,0.5)]">Max single-stock weight</span>
+                  <span className="font-mono font-black text-[#0d2b2b]">{currentRules.max_weight}</span>
                 </div>
-                <div className="flex justify-between items-center py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Min portfolio stocks</span>
-                  <span className="font-mono font-black text-white">{currentRules.min_stocks}</span>
+                <div className="flex justify-between items-center py-1.5 border-b border-[rgba(0,128,128,0.15)]">
+                  <span className="text-[rgba(13,43,43,0.5)]">Min portfolio stocks</span>
+                  <span className="font-mono font-black text-[#0d2b2b]">{currentRules.min_stocks}</span>
                 </div>
-                <div className="flex justify-between items-center py-1.5 border-b border-slate-800">
-                  <span className="text-slate-400">Risk model</span>
-                  <span className="font-mono font-black text-white capitalize">{riskLevel}</span>
+                <div className="flex justify-between items-center py-1.5 border-b border-[rgba(0,128,128,0.15)]">
+                  <span className="text-[rgba(13,43,43,0.5)]">Risk model</span>
+                  <span className="font-mono font-black text-[#0d2b2b] capitalize">{riskLevel}</span>
                 </div>
                 <div className="pt-1">
-                  <span className="text-slate-500 block mb-1.5">Sector exclusions:</span>
+                  <span className="text-[rgba(13,43,43,0.5)] block mb-1.5">Sector exclusions:</span>
                   {excludedSectors.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {excludedSectors.map((s) => (
@@ -483,15 +483,15 @@ export default function ConfirmPage() {
                       ))}
                     </div>
                   ) : (
-                    <span className="text-slate-600 italic text-[10px]">None</span>
+                    <span className="text-[rgba(13,43,43,0.35)] italic text-[10px]">None</span>
                   )}
                 </div>
               </div>
             </Card>
 
             {/* What happens next info */}
-            <div className="p-4 rounded-xl bg-purple-950/20 border border-purple-500/15 text-xs text-slate-400 space-y-2">
-              <p className="font-bold text-purple-300 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+            <div className="p-4 rounded-xl bg-[rgba(154,110,58,0.08)] border border-[rgba(154,110,58,0.2)] text-xs text-[rgba(13,43,43,0.7)] space-y-2">
+              <p className="font-bold text-[#9a6e3a] flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
                 <Cpu className="h-3.5 w-3.5" /> What happens next
               </p>
               <ul className="space-y-1 leading-relaxed">
@@ -502,7 +502,7 @@ export default function ConfirmPage() {
                 <li>• Solve mean-variance optimizer (Kelly)</li>
                 <li>• Generate SHAP rationale & risk critique</li>
               </ul>
-              <p className="text-[10px] italic text-slate-600 mt-1">
+              <p className="text-[10px] italic text-[rgba(13,43,43,0.35)] mt-1">
                 Typically 30–60 seconds depending on server load.
               </p>
             </div>
@@ -521,7 +521,8 @@ export default function ConfirmPage() {
                 type="button"
                 onClick={handleConfirm}
                 disabled={loading}
-                className="w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-[#00D4FF] to-[#7C3AED] text-[#0A0E1A] hover:shadow-[0_0_24px_rgba(0,212,255,0.25)] hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 cursor-pointer"
+                className="w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:shadow-[0_0_24px_rgba(0,128,128,0.25)] hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 cursor-pointer"
+                style={{ background: '#008080', color: '#F4E1C1' }}
               >
                 <CheckCircle2 className="h-4 w-4" />
                 This Looks Right — Optimize!
@@ -530,7 +531,7 @@ export default function ConfirmPage() {
               <Link to="/analyze" className="block">
                 <button
                   type="button"
-                  className="w-full py-2.5 rounded-xl font-semibold text-sm text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800 transition-all cursor-pointer"
+                  className="w-full py-2.5 rounded-xl font-semibold text-sm text-[rgba(13,43,43,0.5)] hover:text-[#0d2b2b] hover:bg-[rgba(0,128,128,0.06)] border border-[rgba(0,128,128,0.2)] transition-all cursor-pointer"
                 >
                   ← Refine Goal Text
                 </button>
