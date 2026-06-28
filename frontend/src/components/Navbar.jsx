@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Menu, X, LayoutDashboard, Compass, ClipboardList, LogOut, LogIn, UserPlus } from 'lucide-react'
+import { Menu, X, LayoutDashboard, Compass, ClipboardList, LogOut, LogIn, UserPlus, Phone } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
 export default function Navbar() {
@@ -62,6 +62,17 @@ export default function Navbar() {
               <div className="font-['Space_Mono'] text-[8px] tracking-[0.22em] text-[#008080]/75 uppercase mt-0.5 leading-none">AI Portfolio Engine</div>
             </div>
           </Link>
+          <Link
+                  to="/voice-call"
+                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
+                    pathname.startsWith('/voice-call')
+                      ? 'bg-emerald-500/10 text-emerald-400'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <Phone className="h-4 w-4" />
+                  <span className="hidden sm:inline">Voice Call</span>
+                </Link>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">

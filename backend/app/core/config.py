@@ -29,6 +29,8 @@ class Settings:
 
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    VAPI_API_KEY: str = os.getenv("VAPI_API_KEY", "")
+    VAPI_ASSISTANT_ID: str = os.getenv("VAPI_ASSISTANT_ID", "93be6fbc-341f-4110-a0bb-23dc212d2263")
 
     @property
     def CORS_ORIGINS(self) -> list[str]:

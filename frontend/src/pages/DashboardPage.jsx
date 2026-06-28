@@ -19,10 +19,10 @@ import Modal from '../components/Modal'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const LIVE_TICKER_SYMBOLS = [
-  'RELIANCE.NS','TCS.NS','HDFCBANK.NS','ICICIBANK.NS','INFY.NS',
-  'SBIN.NS','BHARTIARTL.NS','BAJFINANCE.NS','KOTAKBANK.NS','LT.NS',
-  'HCLTECH.NS','AXISBANK.NS','MARUTI.NS','SUNPHARMA.NS','TITAN.NS',
-  'WIPRO.NS','ONGC.NS','NTPC.NS','TATAMOTORS.NS','TATASTEEL.NS',
+  'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'ICICIBANK.NS', 'INFY.NS',
+  'SBIN.NS', 'BHARTIARTL.NS', 'BAJFINANCE.NS', 'KOTAKBANK.NS', 'LT.NS',
+  'HCLTECH.NS', 'AXISBANK.NS', 'MARUTI.NS', 'SUNPHARMA.NS', 'TITAN.NS',
+  'WIPRO.NS', 'ONGC.NS', 'NTPC.NS', 'TATAMOTORS.NS', 'TATASTEEL.NS',
 ]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -95,17 +95,16 @@ function MarketStatusBar({ status }) {
   const open = status.is_open
   const nextOpen = status.next_open
     ? new Date(status.next_open).toLocaleString('en-IN', {
-        timeZone: 'Asia/Kolkata', hour12: true,
-        weekday: 'short', hour: '2-digit', minute: '2-digit',
-      })
+      timeZone: 'Asia/Kolkata', hour12: true,
+      weekday: 'short', hour: '2-digit', minute: '2-digit',
+    })
     : null
 
   return (
-    <div className={`w-full rounded-xl border px-5 py-3 flex flex-wrap items-center gap-4 text-sm font-medium ${
-      open
+    <div className={`w-full rounded-xl border px-5 py-3 flex flex-wrap items-center gap-4 text-sm font-medium ${open
         ? 'bg-emerald-950/20 border-emerald-500/20'
         : 'bg-[rgba(244,225,193,0.4)] border-[rgba(0,128,128,0.2)]'
-    }`}>
+      }`}>
       {/* Status Badge */}
       <div className="flex items-center gap-2">
         {open ? (
@@ -160,11 +159,10 @@ function MarketStatusBar({ status }) {
 function MoverCard({ mover }) {
   const up = mover.direction === 'up'
   return (
-    <div className={`flex-shrink-0 w-44 rounded-xl border p-4 space-y-2 transition-all hover:scale-[1.02] shadow-sm ${
-      up
+    <div className={`flex-shrink-0 w-44 rounded-xl border p-4 space-y-2 transition-all hover:scale-[1.02] shadow-sm ${up
         ? 'border-emerald-600/30 bg-emerald-500/15'
         : 'border-red-600/30 bg-red-500/15'
-    }`}>
+      }`}>
       <div className="flex items-center justify-between">
         <span className="font-mono font-black text-[#0d2b2b] text-sm">{tickerLabel(mover.ticker)}</span>
         {up
@@ -400,11 +398,11 @@ export default function DashboardPage() {
   const readyPortfolios = portfolios.filter((p) => p.status === 'ready')
   const avgReturn = readyPortfolios.length
     ? readyPortfolios.reduce((s, p) => {
-        const r = p.results?.metrics?.expected_return
-          ?? p.results?.expected_return
-          ?? 0
-        return s + r
-      }, 0) / readyPortfolios.length
+      const r = p.results?.metrics?.expected_return
+        ?? p.results?.expected_return
+        ?? 0
+      return s + r
+    }, 0) / readyPortfolios.length
     : 0
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -605,6 +603,7 @@ export default function DashboardPage() {
                     key={p.id}
                     className="hover:border-[rgba(0,128,128,0.25)] transition-all cursor-pointer flex flex-col justify-between"
                     onClick={() => navigate(`/portfolio/${p.id}`)}
+                    cursor="pointer"
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2 mb-3">

@@ -14,6 +14,7 @@ import ResultPage from './pages/ResultPage'
 import QuestionnairePage from './pages/QuestionnairePage'
 import QuestionnaireResultPage from './pages/QuestionnaireResultPage'
 import PortfolioDetailPage from './pages/PortfolioDetailPage'
+import VoiceCallPage from './pages/VoiceCallPage'
 
 export default function App() {
   const { pathname } = useLocation()
@@ -48,6 +49,7 @@ export default function App() {
               <Route path="/questionnaire" element={<QuestionnairePage />} />
               <Route path="/questionnaire/result" element={<QuestionnaireResultPage />} />
               <Route path="/portfolio/:portfolioId" element={<PortfolioDetailPage />} />
+              <Route path="/voice-call" element={<VoiceCallPage />} />
             </Route>
           </Routes>
         </ErrorBoundary>
