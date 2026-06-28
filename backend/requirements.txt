@@ -17,6 +17,7 @@ ta
 groq
 python-dotenv
 httpx
+smallestai
 pyarrow
 fastparquet
 celery[redis]

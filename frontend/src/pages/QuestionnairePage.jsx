@@ -436,20 +436,39 @@ export default function QuestionnairePage() {
     setPhase('submitting')
 
     try {
-      // Step 1: create the portfolio + kick off analysis
-      const { data } = await api.post('/api/v1/questionnaire/analyze', {
-        answers,
-      })
+      const { data } = await api.post('/api/v1/questionnaire/analyze', { answers })
 
-      // The questionnaire endpoint runs synchronously and returns full portfolio data.
-      // Navigate immediately — no polling needed for this path.
+      // If response contains a full portfolio with results, navigate directly
+      if (data && (data.holdings || data.portfolio?.results)) {
+        navigate('/questionnaire/result', { state: { portfolio: data } })
+        return
+      }
+
+      // If response contains a portfolio_id (async job started), switch to polling
+      const pid = data?.portfolio_id || data?.portfolio?.id || data?.id
+      if (pid) {
+        setPortfolioId(pid)
+        setPhase('pipeline')
+        return
+      }
+
+      // Fallback: try to use the full response as portfolio data
       navigate('/questionnaire/result', { state: { portfolio: data } })
     } catch (err) {
       const detail = err?.response?.data?.detail || ''
+      const responseData = err?.response?.data
 
-      // If the pipeline is still running and we have a portfolio_id, switch to polling mode
-      if (detail && detail.includes('portfolio_id')) {
-        const idMatch = detail.match(/[0-9a-f-]{36}/)
+      // Try to extract portfolio_id from error response body
+      const pidFromBody = responseData?.portfolio_id
+      if (pidFromBody) {
+        setPortfolioId(pidFromBody)
+        setPhase('pipeline')
+        return
+      }
+
+      // Try to extract UUID from error detail string
+      if (detail) {
+        const idMatch = detail.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
         if (idMatch) {
           setPortfolioId(idMatch[0])
           setPhase('pipeline')
@@ -457,8 +476,6 @@ export default function QuestionnairePage() {
         }
       }
 
-      // Check if we can try polling by getting the portfolio id another way
-      // Otherwise show error and return to quiz
       setError(detail || 'Analysis failed. Please try again.')
       setPhase('quiz')
     }

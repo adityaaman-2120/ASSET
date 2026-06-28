@@ -193,7 +193,7 @@ class MarketDataService:
         period: str,
         now: datetime,
     ) -> pd.DataFrame | None:
-        row = await db.get(AnalysisCache, {"ticker": ticker, "date": today})
+        row = await db.get(AnalysisCache, (ticker, today))
         if row is None or not row.ohlcv_data:
             return None
         payload = row.ohlcv_data

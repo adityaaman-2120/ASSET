@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, RefreshCw, Send, MessageSquare, AlertCircle, TrendingUp, Settings } from 'lucide-react'
+import { ArrowLeft, Send, MessageSquare, AlertCircle, Settings } from 'lucide-react'
 import api from '../lib/api'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -13,12 +13,10 @@ export default function PortfolioDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // What-If chat states
   const [question, setQuestion] = useState('')
   const [chatHistory, setChatHistory] = useState([])
   const [chatLoading, setChatLoading] = useState(false)
 
-  // Rebalance states
   const [newRiskLevel, setNewRiskLevel] = useState('medium')
   const [rebalanceLoading, setRebalanceLoading] = useState(false)
   const [rebalanceSuccess, setRebalanceSuccess] = useState('')
@@ -27,7 +25,6 @@ export default function PortfolioDetailPage() {
     try {
       const { data: res } = await api.get(`/api/v1/analysis/portfolio/${portfolioId}`)
 
-      // If the portfolio is not ready yet, redirect to the result polling page
       if (res.portfolio?.status !== 'ready') {
         window.location.href = `/analyze/result/${portfolioId}`
         return
@@ -59,9 +56,8 @@ export default function PortfolioDetailPage() {
       const { data: response } = await api.post(`/api/v1/analysis/whatif/${portfolioId}`, {
         question: userMessage,
       })
-
       setChatHistory((prev) => [...prev, { role: 'advisor', text: response.answer }])
-    } catch (err) {
+    } catch {
       setChatHistory((prev) => [
         ...prev,
         { role: 'advisor', text: 'Sorry, I failed to process your question. Please try again.' },
@@ -79,9 +75,8 @@ export default function PortfolioDetailPage() {
         new_risk_level: newRiskLevel,
       })
       setRebalanceSuccess(`Successfully rebalanced to ${newRiskLevel} risk.`)
-      // Refresh details
       await fetchPortfolioDetails()
-    } catch (err) {
+    } catch {
       setError('Failed to rebalance portfolio.')
     } finally {
       setRebalanceLoading(false)
@@ -95,10 +90,10 @@ export default function PortfolioDetailPage() {
   if (error && !data) {
     return (
       <div className="max-w-md mx-auto py-16 px-4">
-        <Card className="border-red-950 bg-red-950/10 text-center space-y-4">
-          <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
-          <h2 className="text-xl font-bold text-[#F4E1C1]">Error Loading Portfolio</h2>
-          <p className="text-xs text-red-300 bg-slate-950/60 p-3 rounded-lg border border-slate-900 leading-relaxed font-mono">
+        <Card className="text-center space-y-4">
+          <AlertCircle className="mx-auto h-12 w-12 text-red-600" />
+          <h2 className="text-xl font-bold text-[#0d2b2b]">Error Loading Portfolio</h2>
+          <p className="text-xs text-red-700 bg-red-500/10 p-3 rounded-lg border border-red-600/20 leading-relaxed font-mono">
             {error}
           </p>
           <Link to="/dashboard">
@@ -111,45 +106,49 @@ export default function PortfolioDetailPage() {
 
   return (
     <div className="space-y-6 py-6">
-      {/* Header section */}
+      {/* Header */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <Link to="/dashboard" className="text-xs text-[#008080] hover:underline flex items-center gap-1 mb-1 font-medium">
             <ArrowLeft className="h-3 w-3" /> Back to Dashboard
           </Link>
-          <h1 className="text-3xl font-extrabold text-[#F4E1C1] tracking-tight">
+          <h1 className="text-3xl font-black text-[#0d2b2b] tracking-tight">
             {data.portfolio?.name}
           </h1>
-          <p className="text-sm text-[rgba(244,225,193,0.55)]">
-            Portfolio Value: <span className="font-bold text-[#F4E1C1] font-mono">₹{data.portfolio?.amount?.toLocaleString('en-IN')}</span> | Target Risk:{' '}
-            <span className="font-bold text-[#F4E1C1] capitalize">{data.portfolio?.risk_level}</span>
+          <p className="text-sm text-[rgba(13,43,43,0.5)] mt-1">
+            Portfolio Value:{' '}
+            <span className="font-bold text-[#0d2b2b] font-mono">
+              ₹{data.portfolio?.amount?.toLocaleString('en-IN')}
+            </span>{' '}
+            | Target Risk:{' '}
+            <span className="font-bold text-[#0d2b2b] capitalize">{data.portfolio?.risk_level}</span>
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Side: Portfolio analysis and Visualizer */}
+        {/* Left: Portfolio Visualizer */}
         <div className="lg:col-span-2 space-y-6">
           <PortfolioVisualizer data={data} />
         </div>
 
-        {/* Right Side: Rebalance + What-If Chat */}
+        {/* Right: Rebalance + Chat */}
         <div className="space-y-6">
-          {/* Rebalance Options */}
+          {/* Rebalance */}
           <Card className="space-y-4">
-            <h3 className="text-sm font-bold text-[#F4E1C1] flex items-center gap-1.5 uppercase tracking-wider">
+            <h3 className="text-sm font-black text-[#0d2b2b] flex items-center gap-1.5 uppercase tracking-wider">
               <Settings className="h-4 w-4 text-[#008080]" />
               Strategy Rebalancing
             </h3>
-            <p className="text-xs text-[rgba(244,225,193,0.55)]">
-              Change the target risk constraint. This will re-run the mean-variance optimizer and generate new holding weights.
+            <p className="text-xs text-[rgba(13,43,43,0.5)]">
+              Change the target risk constraint to re-run the optimizer with new holding weights.
             </p>
 
             <div className="flex gap-2">
               <select
                 value={newRiskLevel}
                 onChange={(e) => setNewRiskLevel(e.target.value)}
-                className="flex-1 rounded-lg border border-[rgba(0,128,128,0.2)] bg-[rgba(13,43,43,0.5)] px-3 py-2 text-xs text-[#F4E1C1] focus:border-[#008080] focus:outline-none"
+                className="flex-1 rounded-lg border border-[rgba(0,128,128,0.2)] bg-[rgba(244,225,193,0.5)] px-3 py-2 text-xs text-[#0d2b2b] focus:border-[#008080] focus:outline-none"
               >
                 <option value="low">Low Risk (Max 10% per stock)</option>
                 <option value="medium">Medium Risk (Max 15% per stock)</option>
@@ -167,25 +166,25 @@ export default function PortfolioDetailPage() {
             </div>
 
             {rebalanceSuccess && (
-              <p className="text-xs text-emerald-400 font-semibold bg-emerald-950/20 border border-emerald-500/20 rounded p-2 text-center">
+              <p className="text-xs text-emerald-700 font-semibold bg-emerald-500/10 border border-emerald-600/20 rounded p-2 text-center">
                 {rebalanceSuccess}
               </p>
             )}
           </Card>
 
-          {/* What-If AI Advisor Chat */}
+          {/* What-If Chat */}
           <Card className="flex flex-col h-[480px] justify-between">
-            <div className="space-y-3">
-              <h3 className="text-sm font-bold text-[#F4E1C1] flex items-center gap-1.5 uppercase tracking-wider border-b border-[rgba(0,128,128,0.2)] pb-3">
+            <div className="space-y-3 flex-1 min-h-0">
+              <h3 className="text-sm font-black text-[#0d2b2b] flex items-center gap-1.5 uppercase tracking-wider border-b border-[rgba(0,128,128,0.15)] pb-3">
                 <MessageSquare className="h-4 w-4 text-[#9a6e3a]" />
                 What-If AI Advisor
               </h3>
 
-              <div className="h-[310px] overflow-y-auto space-y-3 pr-1 text-xs scrollbar-thin scrollbar-thumb-[rgba(0,128,128,0.2)] scrollbar-track-transparent">
+              <div className="h-[310px] overflow-y-auto space-y-3 pr-1 text-xs">
                 {chatHistory.length === 0 ? (
-                  <div className="text-center text-[rgba(244,225,193,0.4)] py-12 px-4 italic leading-relaxed">
+                  <div className="text-center text-[rgba(13,43,43,0.4)] py-12 px-4 italic leading-relaxed">
                     Ask questions about this strategy, e.g.:
-                    <div className="mt-2 text-[10px] not-italic text-[rgba(244,225,193,0.55)] space-y-1">
+                    <div className="mt-2 text-[10px] not-italic text-[rgba(13,43,43,0.5)] space-y-1">
                       <p>"Why did you allocate to tech?"</p>
                       <p>"What is the impact of a Nifty 10% drop?"</p>
                     </div>
@@ -194,10 +193,10 @@ export default function PortfolioDetailPage() {
                   chatHistory.map((msg, index) => (
                     <div
                       key={index}
-                      className={`p-3 rounded-lg leading-relaxed ${
+                      className={`p-3 rounded-xl leading-relaxed ${
                         msg.role === 'user'
-                          ? 'bg-[rgba(13,43,43,0.8)] text-[#F4E1C1] ml-6 text-right'
-                          : 'bg-[rgba(13,43,43,0.85)] border border-[rgba(0,128,128,0.2)] text-[rgba(244,225,193,0.75)] mr-6'
+                          ? 'bg-[rgba(0,128,128,0.08)] border border-[rgba(0,128,128,0.15)] text-[#0d2b2b] ml-6'
+                          : 'bg-[rgba(244,225,193,0.5)] border border-[rgba(0,128,128,0.15)] text-[rgba(13,43,43,0.8)] mr-6'
                       }`}
                     >
                       <span className={`text-[9px] font-black uppercase tracking-wider block mb-1 ${
@@ -211,28 +210,32 @@ export default function PortfolioDetailPage() {
                 )}
 
                 {chatLoading && (
-                  <div className="bg-[rgba(13,43,43,0.85)] border border-[rgba(0,128,128,0.2)] p-3 rounded-lg mr-6 text-[rgba(244,225,193,0.55)]">
+                  <div className="bg-[rgba(244,225,193,0.5)] border border-[rgba(0,128,128,0.15)] p-3 rounded-xl mr-6">
                     <span className="text-[9px] font-black uppercase tracking-wider text-[#9a6e3a] block mb-1">
                       AI Advisor
                     </span>
                     <div className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-[#008080] rounded-full animate-bounce" />
-                      <span className="w-1.5 h-1.5 bg-[#008080] rounded-full animate-bounce [animation-delay:0.2s]" />
-                      <span className="w-1.5 h-1.5 bg-[#008080] rounded-full animate-bounce [animation-delay:0.4s]" />
+                      {[0, 1, 2].map((i) => (
+                        <span
+                          key={i}
+                          className="w-1.5 h-1.5 bg-[#008080] rounded-full animate-bounce"
+                          style={{ animationDelay: `${i * 150}ms` }}
+                        />
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            <form onSubmit={handleSendQuestion} className="flex gap-2 border-t border-[rgba(0,128,128,0.2)] pt-3 mt-3">
+            <form onSubmit={handleSendQuestion} className="flex gap-2 border-t border-[rgba(0,128,128,0.15)] pt-3 mt-3">
               <input
                 type="text"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Ask advisor..."
+                placeholder="Ask advisor…"
                 disabled={chatLoading}
-                className="flex-1 rounded-lg border border-[rgba(0,128,128,0.2)] bg-[rgba(13,43,43,0.5)] px-3 py-2 text-xs text-[#F4E1C1] focus:border-[#008080] focus:outline-none"
+                className="flex-1 rounded-lg border border-[rgba(0,128,128,0.2)] bg-[rgba(244,225,193,0.5)] px-3 py-2 text-xs text-[#0d2b2b] placeholder-[rgba(13,43,43,0.35)] focus:border-[#008080] focus:outline-none"
               />
               <button
                 type="submit"

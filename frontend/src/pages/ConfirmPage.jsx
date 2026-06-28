@@ -30,8 +30,8 @@ const COMMON_SECTORS = [
 
 function SectorChip({ label, onRemove, variant = 'default' }) {
   const colors = {
-    excluded: 'bg-red-950/50 border-red-500/30 text-red-300',
-    preferred: 'bg-purple-950/50 border-purple-500/30 text-purple-300',
+    excluded: 'bg-red-500/10 border-red-600/30 text-red-700',
+    preferred: 'bg-[rgba(154,110,58,0.1)] border-[rgba(154,110,58,0.3)] text-[#78350f]',
     default: 'bg-[rgba(0,128,128,0.08)] border-[rgba(0,128,128,0.2)] text-[#008080]',
   }
   return (
@@ -355,10 +355,10 @@ export default function ConfirmPage() {
                   ) : (
                     <span className={`inline-block px-3 py-1.5 rounded-lg text-sm font-bold capitalize border ${
                       riskLevel === 'low'
-                        ? 'bg-emerald-950/50 border-emerald-500/30 text-emerald-300'
+                        ? 'bg-emerald-500/15 border-emerald-600/30 text-emerald-700'
                         : riskLevel === 'high'
-                        ? 'bg-red-950/50 border-red-500/30 text-red-300'
-                        : 'bg-amber-950/50 border-amber-500/30 text-amber-300'
+                        ? 'bg-red-500/15 border-red-600/30 text-red-700'
+                        : 'bg-amber-500/15 border-amber-600/30 text-[#78350f]'
                     }`}>
                       {riskLevel}
                     </span>
@@ -477,7 +477,7 @@ export default function ConfirmPage() {
                   {excludedSectors.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {excludedSectors.map((s) => (
-                        <span key={s} className="text-[10px] bg-red-950/40 border border-red-500/20 text-red-300 px-1.5 py-0.5 rounded">
+                        <span key={s} className="text-[10px] bg-red-500/10 border border-red-600/30 text-red-700 px-1.5 py-0.5 rounded">
                           {s}
                         </span>
                       ))}

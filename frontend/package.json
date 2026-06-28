@@ -11,7 +11,7 @@
   "dependencies": {
     "@headlessui/react": "^2.2.0",
     "@tanstack/react-query": "^5.62.0",
-    "@vapi-ai/web": "^2.5.2",
+    "atoms-client-sdk": "^1.1.0",
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
     "lucide-react": "^0.469.0",

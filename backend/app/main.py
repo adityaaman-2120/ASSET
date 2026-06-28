@@ -8,7 +8,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import analysis, auth, health, market, portfolio, questionnaire, vapi
+from app.api import analysis, auth, health, market, portfolio, questionnaire, voice
 from app.core.config import settings
 
 app = FastAPI(
@@ -31,7 +31,7 @@ app.include_router(market.router, prefix=settings.API_V1_PREFIX)
 app.include_router(portfolio.router, prefix=settings.API_V1_PREFIX)
 app.include_router(analysis.router, prefix=settings.API_V1_PREFIX)
 app.include_router(questionnaire.router, prefix=settings.API_V1_PREFIX)
-app.include_router(vapi.router, prefix=settings.API_V1_PREFIX)
+app.include_router(voice.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/")

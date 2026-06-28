@@ -8,7 +8,7 @@ import {
 import {
   ArrowLeft, BarChart2, AlertCircle, AlertTriangle, Download,
   Share2, ChevronDown, ChevronUp, Send, Zap, Shield,
-  TrendingUp, TrendingDown, Activity, Layers, CheckCircle,
+  TrendingUp, TrendingDown, Activity, Layers, CheckCircle, Check,
   RefreshCw, Star, Loader2,
 } from 'lucide-react'
 import api from '../lib/api'
@@ -272,27 +272,29 @@ function OverviewTab({ data }) {
 // ─── SHAP horizontal bar ─────────────────────────────────────────────────────
 
 function ShapBar({ shap }) {
-  if (!shap || !shap.features) return null
-  const entries = Object.entries(shap.features || {})
-    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-    .slice(0, 5)
-  const maxAbs = Math.max(...entries.map(([, v]) => Math.abs(v)), 0.001)
+  if (!shap) return null
+  // Backend returns top_factors: [{factor, feature, impact, direction}, ...]
+  const factors = shap.top_factors || []
+  if (factors.length === 0) return null
+  const maxAbs = Math.max(...factors.map((f) => Math.abs(f.impact || 0)), 0.001)
   return (
     <div className="space-y-2 mt-3">
-      <p className="text-[9px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)]">Top SHAP Features (Why this stock?)</p>
-      {entries.map(([feat, val]) => {
+      <p className="text-[9px] font-black uppercase tracking-wider text-[rgba(13,43,43,0.4)]">Top SHAP Features (Why this stock?)</p>
+      {factors.slice(0, 5).map((f, i) => {
+        const val = f.impact || 0
         const pctW = (Math.abs(val) / maxAbs) * 100
-        const pos = val >= 0
+        const pos = f.direction === 'positive' || val >= 0
+        const label = (f.factor || f.feature || '').replace(/_/g, ' ')
         return (
-          <div key={feat} className="flex items-center gap-2 text-[10px]">
-            <span className="w-28 text-[rgba(244,225,193,0.55)] truncate flex-shrink-0">{feat.replace(/_/g, ' ')}</span>
-            <div className="flex-1 h-4 bg-[rgba(13,43,43,0.8)] rounded overflow-hidden relative">
+          <div key={i} className="flex items-center gap-2 text-[10px]">
+            <span className="w-28 text-[rgba(13,43,43,0.55)] truncate flex-shrink-0">{label}</span>
+            <div className="flex-1 h-4 bg-[rgba(0,128,128,0.1)] rounded overflow-hidden relative">
               <div
                 className={`h-full rounded transition-all ${pos ? 'bg-emerald-500/60' : 'bg-red-500/60'}`}
-                style={{ width: `${pctW}%`, marginLeft: pos ? 0 : undefined }}
+                style={{ width: `${pctW}%` }}
               />
             </div>
-            <span className={`w-12 text-right font-mono font-bold ${pos ? 'text-emerald-400' : 'text-red-400'}`}>
+            <span className={`w-12 text-right font-mono font-bold ${pos ? 'text-emerald-700' : 'text-red-600'}`}>
               {pos ? '+' : ''}{val.toFixed(3)}
             </span>
           </div>
@@ -406,7 +408,7 @@ function HoldingsTab({ data }) {
                     </td>
                   </tr>
                   {isExp && (
-                    <tr className="bg-slate-950/40">
+                    <tr className="bg-[rgba(0,128,128,0.04)]">
                       <td colSpan={6} className="px-6 py-4">
                         <div className="space-y-1">
                           <p className="text-[10px] font-black uppercase tracking-wider text-[#008080] mb-2">
@@ -633,24 +635,24 @@ function StressTab({ data }) {
               key={sc.name}
               type="button"
               onClick={() => setActiveScenario(sc.name)}
-              className={`text-left p-5 rounded-xl border-2 transition-all cursor-pointer ${isActive ? 'border-[#008080]/50 bg-[rgba(0,128,128,0.05)]' : 'border-[rgba(0,128,128,0.2)] bg-[rgba(13,43,43,0.3)] hover:border-[rgba(0,128,128,0.25)]'
+              className={`text-left p-5 rounded-xl border-2 transition-all cursor-pointer ${isActive ? 'border-[#008080] bg-[rgba(0,128,128,0.06)]' : 'border-[rgba(0,128,128,0.2)] bg-[rgba(244,225,193,0.5)] hover:border-[rgba(0,128,128,0.4)]'
                 }`}
             >
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-2xl">{meta.emoji}</span>
                 <div>
-                  <p className="text-sm font-bold text-[#F4E1C1]">{meta.label}</p>
-                  <p className="text-[10px] text-[rgba(244,225,193,0.4)]">{meta.period}</p>
+                  <p className="text-sm font-bold text-[#0d2b2b]">{meta.label}</p>
+                  <p className="text-[10px] text-[rgba(13,43,43,0.5)]">{meta.period}</p>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
                 {[
-                  ['Portfolio Ret.', pct(ret), ret >= 0 ? 'text-emerald-400' : 'text-red-400'],
-                  ['Max Drawdown', pct(dd), 'text-red-400'],
-                  ['Recovery', `${rec}mo`, 'text-amber-400'],
+                  ['Portfolio Ret.', pct(ret), ret >= 0 ? 'text-emerald-700' : 'text-red-600'],
+                  ['Max Drawdown', pct(dd), 'text-red-600'],
+                  ['Recovery', `${rec}mo`, 'text-[#9a6e3a]'],
                 ].map(([label, val, cls]) => (
-                  <div key={label} className="bg-[rgba(13,43,43,0.5)] rounded-lg p-2">
-                    <p className="text-[9px] text-[rgba(244,225,193,0.4)] font-bold uppercase">{label}</p>
+                  <div key={label} className="bg-[rgba(0,128,128,0.06)] rounded-lg p-2">
+                    <p className="text-[9px] text-[rgba(13,43,43,0.5)] font-bold uppercase">{label}</p>
                     <p className={`font-black font-mono text-sm ${cls}`}>{val}</p>
                   </div>
                 ))}
@@ -661,24 +663,24 @@ function StressTab({ data }) {
       </div>
 
       {/* Scenario line chart */}
-      <Card className="bg-[rgba(13,43,43,0.3)] border-[rgba(0,128,128,0.2)]/60">
-        <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(244,225,193,0.4)] mb-1">
+      <Card>
+        <p className="text-[10px] font-black uppercase tracking-wider text-[rgba(13,43,43,0.5)] mb-1">
           {SCENARIO_META[activeScenario]?.label || activeScenario} — Portfolio vs Nifty 50 (indexed to 100)
         </p>
-        <p className="text-[9px] text-[rgba(244,225,193,0.3)] italic mb-4">
+        <p className="text-[9px] text-[rgba(13,43,43,0.4)] italic mb-4">
           Simulated based on your sector allocation and the historical Nifty performance during this period.
         </p>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ left: 0, right: 16 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-              <XAxis dataKey="m" fontSize={10} stroke="#4b5563" />
-              <YAxis domain={['auto', 'auto']} fontSize={10} stroke="#4b5563" tickFormatter={(v) => `${v}`} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,128,128,0.1)" />
+              <XAxis dataKey="m" fontSize={10} stroke="rgba(13,43,43,0.4)" />
+              <YAxis domain={['auto', 'auto']} fontSize={10} stroke="rgba(13,43,43,0.4)" tickFormatter={(v) => `${v}`} />
               <Tooltip {...TOOLTIP_STYLE} formatter={(v, n) => [`${v} (indexed)`, n]} />
-              <ReferenceLine y={100} stroke="#4b5563" strokeDasharray="4 2" />
+              <ReferenceLine y={100} stroke="rgba(13,43,43,0.3)" strokeDasharray="4 2" />
               <Line type="monotone" dataKey="p" stroke="#008080" strokeWidth={2.5} dot={false} name="Your Portfolio" />
-              <Line type="monotone" dataKey="n" stroke="#4b5563" strokeWidth={1.5} dot={false} name="Nifty 50" strokeDasharray="4 2" />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Line type="monotone" dataKey="n" stroke="#9a6e3a" strokeWidth={1.5} dot={false} name="Nifty 50" strokeDasharray="4 2" />
+              <Legend wrapperStyle={{ fontSize: 10, color: '#0d2b2b' }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -842,7 +844,7 @@ function PollingScreen({ progress }) {
       {/* SVG ring */}
       <div className="relative mx-auto w-28 h-28">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="44" fill="none" stroke="#1f2937" strokeWidth="4" />
+          <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(0,128,128,0.15)" strokeWidth="4" />
           <circle
             cx="50" cy="50" r="44" fill="none"
             stroke="url(#rg)" strokeWidth="4" strokeLinecap="round"
@@ -857,13 +859,13 @@ function PollingScreen({ progress }) {
           </defs>
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-black text-[#F4E1C1] font-mono">{progress}%</span>
+          <span className="text-2xl font-black text-[#0d2b2b] font-mono">{progress}%</span>
         </div>
       </div>
 
       <div>
-        <h3 className="text-xl font-black text-[#F4E1C1]">Building Your Portfolio</h3>
-        <p className="text-sm text-[rgba(244,225,193,0.55)] mt-1">{msg}</p>
+        <h3 className="text-xl font-black text-[#0d2b2b]">Building Your Portfolio</h3>
+        <p className="text-sm text-[rgba(13,43,43,0.5)] mt-1">{msg}</p>
       </div>
 
       <div className="space-y-2.5 text-left">
@@ -876,14 +878,14 @@ function PollingScreen({ progress }) {
                 }`}>
                 {done ? <Check className="h-3 w-3 text-white stroke-[3]" /> : isActive ? <span className="w-1.5 h-1.5 bg-[#008080] rounded-full animate-pulse" /> : null}
               </span>
-              <span className={done ? 'text-emerald-400 line-through decoration-emerald-700' : isActive ? 'text-[#F4E1C1] font-bold' : 'text-[rgba(244,225,193,0.3)]'}>
+              <span className={done ? 'text-emerald-700 line-through decoration-emerald-600' : isActive ? 'text-[#0d2b2b] font-bold' : 'text-[rgba(13,43,43,0.3)]'}>
                 {s.label}
               </span>
             </div>
           )
         })}
       </div>
-      <p className="text-[10px] text-[rgba(244,225,193,0.3)] italic">Don't close this tab · Usually 30–60 seconds</p>
+      <p className="text-[10px] text-[rgba(13,43,43,0.35)] italic">Don't close this tab · Usually 30–60 seconds</p>
     </div>
   )
 }
@@ -964,13 +966,13 @@ export default function ResultPage() {
   if (error) {
     return (
       <div className="max-w-md mx-auto py-16 px-4">
-        <Card className="border-red-950 bg-red-950/10 text-center space-y-4">
-          <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
-          <h2 className="text-xl font-bold text-[#F4E1C1]">Optimization Failed</h2>
-          <p className="text-xs text-red-300 bg-slate-950/60 p-3 rounded-lg border border-slate-900 leading-relaxed font-mono">{error}</p>
+        <Card className="text-center space-y-4">
+          <AlertCircle className="mx-auto h-12 w-12 text-red-600" />
+          <h2 className="text-xl font-bold text-[#0d2b2b]">Optimization Failed</h2>
+          <p className="text-xs text-red-700 bg-red-500/10 p-3 rounded-lg border border-red-600/20 leading-relaxed font-mono">{error}</p>
           <div className="flex justify-center gap-3">
             <Link to="/analyze"><button type="button" className="px-4 py-2 rounded-lg text-sm font-bold cursor-pointer text-[#F4E1C1]" style={{ background: '#008080' }}>New Goal</button></Link>
-            <Link to="/dashboard"><button type="button" className="px-4 py-2 rounded-lg border border-[rgba(0,128,128,0.2)] text-[rgba(244,225,193,0.75)] text-sm font-bold cursor-pointer">Dashboard</button></Link>
+            <Link to="/dashboard"><button type="button" className="px-4 py-2 rounded-lg border border-[rgba(0,128,128,0.2)] text-[rgba(13,43,43,0.7)] text-sm font-bold cursor-pointer">Dashboard</button></Link>
           </div>
         </Card>
       </div>
@@ -991,21 +993,21 @@ export default function ResultPage() {
           <Link to="/dashboard" className="text-xs text-[#008080] hover:underline flex items-center gap-1 mb-1 font-medium">
             <ArrowLeft className="h-3 w-3" /> Back to Dashboard
           </Link>
-          <h1 className="text-3xl font-black text-[#F4E1C1] tracking-tight flex items-center gap-2">
+          <h1 className="text-3xl font-black text-[#0d2b2b] tracking-tight flex items-center gap-2">
             <BarChart2 className="h-7 w-7 text-[#008080]" />
             {p.name || 'Portfolio Results'}
           </h1>
-          <p className="text-sm text-[rgba(244,225,193,0.55)] mt-1">
+          <p className="text-sm text-[rgba(13,43,43,0.5)] mt-1">
             <span className="capitalize">{p.risk_level}</span> risk ·{' '}
             {fmtINR(p.amount)} invested ·{' '}
-            <span className="font-mono text-xs text-[rgba(244,225,193,0.4)]">{pid}</span>
+            <span className="font-mono text-xs text-[rgba(13,43,43,0.4)]">{pid}</span>
           </p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <button
             type="button"
             onClick={handleDownload}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[rgba(0,128,128,0.2)] text-[rgba(244,225,193,0.55)] hover:text-[#F4E1C1] hover:bg-[rgba(0,128,128,0.08)] text-xs font-semibold transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[rgba(0,128,128,0.2)] text-[rgba(13,43,43,0.5)] hover:text-[#0d2b2b] hover:bg-[rgba(0,128,128,0.08)] text-xs font-semibold transition-all cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" /> Download JSON
           </button>

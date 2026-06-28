@@ -338,6 +338,24 @@ def _return_distribution(weights: dict, histories: dict, bins: int = 20) -> list
 # --------------------------------------------------------------------------- #
 def build_portfolio_json(portfolio: Portfolio) -> dict:
     r = portfolio.results or {}
+    c = portfolio.constraints or {}
+
+    # Backward compatibility: portfolios created before results was populated.
+    # Fall back to constraints.metrics / constraints.critique.
+    if not r.get("weights"):
+        cm = c.get("metrics") or {}
+        cc = c.get("critique") or {}
+        r = {
+            "weights": cm.get("weights", {}),
+            "expected_return": cm.get("expected_return"),
+            "volatility": cm.get("volatility"),
+            "sharpe": cm.get("sharpe"),
+            "stress_test": r.get("stress_test"),
+            "risk_warnings": cc.get("warnings", []),
+            "devils_critique": cc,
+            "charts_data": r.get("charts_data", {}),
+        }
+
     return {
         "portfolio": {
             "id": str(portfolio.id),
@@ -362,7 +380,10 @@ def build_portfolio_json(portfolio: Portfolio) -> dict:
             }
             for h in portfolio.holdings
         ],
-        "stress_test": {"scenarios": _stress_scenarios(r.get("stress_test"))},
+        "stress_test": {
+            "scenarios": _stress_scenarios(r.get("stress_test")),
+            "summary": (r.get("stress_test") or {}).get("summary"),
+        },
         "risk_warnings": r.get("risk_warnings", []),
         "devils_critique": r.get("devils_critique", {}),
         "charts_data": r.get("charts_data", {}),
@@ -376,7 +397,16 @@ def _stress_scenarios(stress: dict | None) -> list[dict]:
     for name, data in stress.items():
         if name == "summary" or not isinstance(data, dict):
             continue
-        scenarios.append({"name": name, **data})
+        recovery_days = data.get("recovery_days")
+        recovery_months = round(recovery_days / 21) if recovery_days is not None else None
+        scenarios.append({
+            "name": name,
+            "portfolio_return": data.get("final_return"),
+            "max_drawdown": data.get("max_drawdown"),
+            "recovery_months": recovery_months,
+            **{k: v for k, v in data.items()
+               if k not in ("final_return", "recovery_days")},
+        })
     return scenarios
 
 

@@ -4,11 +4,9 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.auth import get_current_user
 from app.db.session import get_db
@@ -17,7 +15,6 @@ from app.models.portfolio import Portfolio, PortfolioStatus, RiskLevel
 from app.services.llm_service import llm_service
 from app.services.analysis_pipeline import (
     default_portfolio_name,
-    build_portfolio_json,
     run_full_analysis_async,
 )
 
@@ -225,6 +222,7 @@ async def get_questions(current_user: User = Depends(get_current_user)):
 @router.post("/analyze")
 async def analyze_questionnaire(
     payload: AnalyzeQuestionnaireRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -253,52 +251,12 @@ async def analyze_questionnaire(
         await db.commit()
         await db.refresh(portfolio)
 
-        # Run pipeline synchronously in-process
-        await run_full_analysis_async(str(portfolio.id))
+        # Launch pipeline as a background task so we return immediately
+        portfolio_id = str(portfolio.id)
+        background_tasks.add_task(run_full_analysis_async, portfolio_id)
 
-        # Reload portfolio with holdings
-        result = await db.execute(
-            select(Portfolio)
-            .where(Portfolio.id == portfolio.id, Portfolio.user_id == current_user.id)
-            .options(selectinload(Portfolio.holdings))
-        )
-        portfolio = result.scalar_one_or_none()
-
-        if portfolio is None:
-            raise ValueError("Portfolio disappeared after pipeline run")
-
-        # Build basic portfolio JSON
-        p_json = build_portfolio_json(portfolio)
-
-        # 3. Compute return range, benchmarks, and investment timeline
-        expected_return = p_json["portfolio"]["expected_return"] or 0.15
-        volatility = p_json["portfolio"]["volatility"] or 0.20
-        pessimistic = max(-0.5, expected_return - 1.5 * volatility)
-        optimistic = expected_return + 1.5 * volatility
-
-        return_range = {
-            "pessimistic": round(pessimistic, 4),
-            "base": round(expected_return, 4),
-            "optimistic": round(optimistic, 4),
-        }
-
-        benchmarks = {
-            "nifty_50": {"expected_return": 0.12, "volatility": 0.15, "sharpe": 0.8},
-            "sensex": {"expected_return": 0.115, "volatility": 0.148, "sharpe": 0.78},
-        }
-
-        amount = p_json["portfolio"]["amount"] or 100000.0
-        timeline = {
-            "1y": round(amount * (1 + expected_return) ** 1, 2),
-            "3y": round(amount * (1 + expected_return) ** 3, 2),
-            "5y": round(amount * (1 + expected_return) ** 5, 2),
-        }
-
-        p_json["expected_return_range"] = return_range
-        p_json["benchmarks"] = benchmarks
-        p_json["investment_timeline"] = timeline
-
-        return p_json
+        # Return portfolio_id so the frontend can poll /api/v1/analysis/status/{id}
+        return {"portfolio_id": portfolio_id, "status": "processing"}
 
     except Exception as exc:
         raise HTTPException(

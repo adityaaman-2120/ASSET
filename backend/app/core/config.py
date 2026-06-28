@@ -29,8 +29,14 @@ class Settings:
 
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    VAPI_API_KEY: str = os.getenv("VAPI_API_KEY", "")
-    VAPI_ASSISTANT_ID: str = os.getenv("VAPI_ASSISTANT_ID", "93be6fbc-341f-4110-a0bb-23dc212d2263")
+
+    # Smallest.ai (Atoms) voice agent. The API key is a SECRET and must stay
+    # server-side; the backend uses it to mint short-lived web-call tokens.
+    SMALLEST_API_KEY: str = os.getenv("SMALLEST_API_KEY", "")
+    SMALLEST_AGENT_ID: str = os.getenv("SMALLEST_AGENT_ID", "")
+    SMALLEST_API_BASE: str = os.getenv(
+        "SMALLEST_API_BASE", "https://atoms-api.smallest.ai"
+    )
 
     @property
     def CORS_ORIGINS(self) -> list[str]:

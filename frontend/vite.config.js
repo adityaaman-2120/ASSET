@@ -8,9 +8,8 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // Forward API calls to the FastAPI backend during development.
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },
